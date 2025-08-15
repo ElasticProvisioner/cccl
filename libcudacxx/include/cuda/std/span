@@ -133,6 +133,7 @@ public:
   _CCCL_HIDE_FROM_ABI span(const span&) noexcept            = default;
   _CCCL_HIDE_FROM_ABI span& operator=(const span&) noexcept = default;
 
+  _CCCL_EXEC_CHECK_DISABLE
   _CCCL_TEMPLATE(class _It)
   _CCCL_REQUIRES(__span_compatible_iterator<_It, element_type>)
   _CCCL_API constexpr explicit span(_It __first, [[maybe_unused]] size_type __count)
@@ -141,6 +142,7 @@ public:
     _CCCL_ASSERT(_Extent == __count, "size mismatch in span's constructor (iterator, len)");
   }
 
+  _CCCL_EXEC_CHECK_DISABLE
   _CCCL_TEMPLATE(class _It, class _End)
   _CCCL_REQUIRES(__span_compatible_iterator<_It, element_type> _CCCL_AND __span_compatible_sentinel_for<_End, _It>)
   _CCCL_API constexpr explicit span(_It __first, [[maybe_unused]] _End __last)
@@ -169,6 +171,23 @@ public:
       : __data_{__arr.data()}
   {}
 
+#if !_CCCL_COMPILER(NVRTC)
+  _CCCL_EXEC_CHECK_DISABLE
+  _CCCL_TEMPLATE(class _OtherElementType)
+  _CCCL_REQUIRES(__span_array_convertible<_OtherElementType, element_type>)
+  _CCCL_API constexpr span(struct ::std::array<_OtherElementType, _Extent>& __arr) noexcept
+      : __data_{__arr.data()}
+  {}
+
+  _CCCL_EXEC_CHECK_DISABLE
+  _CCCL_TEMPLATE(class _OtherElementType)
+  _CCCL_REQUIRES(__span_array_convertible<const _OtherElementType, element_type>)
+  _CCCL_API constexpr span(const struct ::std::array<_OtherElementType, _Extent>& __arr) noexcept
+      : __data_{__arr.data()}
+  {}
+#endif // !_CCCL_COMPILER(NVRTC)
+
+  _CCCL_EXEC_CHECK_DISABLE
   _CCCL_TEMPLATE(class _Range)
   _CCCL_REQUIRES(__span_compatible_range<_Range, element_type>)
   _CCCL_API constexpr explicit span(_Range&& __r)
@@ -356,6 +375,7 @@ public:
   _CCCL_HIDE_FROM_ABI span(const span&) noexcept            = default;
   _CCCL_HIDE_FROM_ABI span& operator=(const span&) noexcept = default;
 
+  _CCCL_EXEC_CHECK_DISABLE
   _CCCL_TEMPLATE(class _It)
   _CCCL_REQUIRES(__span_compatible_iterator<_It, element_type>)
   _CCCL_API constexpr span(_It __first, size_type __count)
@@ -363,6 +383,7 @@ public:
       , __size_{__count}
   {}
 
+  _CCCL_EXEC_CHECK_DISABLE
   _CCCL_TEMPLATE(class _It, class _End)
   _CCCL_REQUIRES(__span_compatible_iterator<_It, element_type> _CCCL_AND __span_compatible_sentinel_for<_End, _It>)
   _CCCL_API constexpr span(_It __first, _End __last)
@@ -392,6 +413,25 @@ public:
       , __size_{_Sz}
   {}
 
+#if !_CCCL_COMPILER(NVRTC)
+  _CCCL_EXEC_CHECK_DISABLE
+  _CCCL_TEMPLATE(class _OtherElementType, size_t _Sz)
+  _CCCL_REQUIRES(__span_array_convertible<_OtherElementType, element_type>)
+  _CCCL_API constexpr span(struct ::std::array<_OtherElementType, _Sz>& __arr) noexcept
+      : __data_{__arr.data()}
+      , __size_{_Sz}
+  {}
+
+  _CCCL_EXEC_CHECK_DISABLE
+  _CCCL_TEMPLATE(class _OtherElementType, size_t _Sz)
+  _CCCL_REQUIRES(__span_array_convertible<const _OtherElementType, element_type>)
+  _CCCL_API constexpr span(const struct ::std::array<_OtherElementType, _Sz>& __arr) noexcept
+      : __data_{__arr.data()}
+      , __size_{_Sz}
+  {}
+#endif // !_CCCL_COMPILER(NVRTC)
+
+  _CCCL_EXEC_CHECK_DISABLE
   _CCCL_TEMPLATE(class _Range)
   _CCCL_REQUIRES(__span_compatible_range<_Range, element_type>)
   _CCCL_API constexpr span(_Range&& __r)
@@ -563,6 +603,14 @@ _CCCL_HOST_DEVICE span(array<_Tp, _Sz>&) -> span<_Tp, _Sz>;
 
 template <class _Tp, size_t _Sz>
 _CCCL_HOST_DEVICE span(const array<_Tp, _Sz>&) -> span<const _Tp, _Sz>;
+
+#if !_CCCL_COMPILER(NVRTC)
+template <class _Tp, size_t _Sz>
+_CCCL_HOST_DEVICE span(struct ::std::array<_Tp, _Sz>&) -> span<_Tp, _Sz>;
+
+template <class _Tp, size_t _Sz>
+_CCCL_HOST_DEVICE span(const struct ::std::array<_Tp, _Sz>&) -> span<const _Tp, _Sz>;
+#endif // !_CCCL_COMPILER(NVRTC)
 
 _CCCL_TEMPLATE(class _It, class _EndOrSize)
 _CCCL_REQUIRES(contiguous_iterator<_It>)
