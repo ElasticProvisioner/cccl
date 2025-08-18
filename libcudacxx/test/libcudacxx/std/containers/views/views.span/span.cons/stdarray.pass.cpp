@@ -43,29 +43,29 @@ __host__ __device__ constexpr void checkCV()
 
   //  Types the same (dynamic sized)
   {
-    [[maybe_unsued]] cuda::std::span<int> s1{arr}; // a cuda::std::span<               int> pointing at int.
+    [[maybe_unused]] cuda::std::span<int> s1{arr}; // a cuda::std::span<               int> pointing at int.
   }
 
   //  Types the same (static sized)
   {
-    [[maybe_unsued]] cuda::std::span<int, 3> s1{arr}; // a cuda::std::span<               int> pointing at int.
+    [[maybe_unused]] cuda::std::span<int, 3> s1{arr}; // a cuda::std::span<               int> pointing at int.
   }
 
   //  types different (dynamic sized)
   {
-    [[maybe_unsued]] cuda::std::span<const int> s1{arr}; // a cuda::std::span<const int> pointing at int.
-    [[maybe_unsued]] cuda::std::span<volatile int> s2{arr}; // a cuda::std::span<volatile int> pointing at int.
-    [[maybe_unsued]] cuda::std::span<volatile int> s3{arr}; // a cuda::std::span<volatile int> pointing at const int.
-    [[maybe_unsued]] cuda::std::span<const volatile int> s4{arr}; // a cuda::std::span<const volatile int> pointing at
+    [[maybe_unused]] cuda::std::span<const int> s1{arr}; // a cuda::std::span<const int> pointing at int.
+    [[maybe_unused]] cuda::std::span<volatile int> s2{arr}; // a cuda::std::span<volatile int> pointing at int.
+    [[maybe_unused]] cuda::std::span<volatile int> s3{arr}; // a cuda::std::span<volatile int> pointing at const int.
+    [[maybe_unused]] cuda::std::span<const volatile int> s4{arr}; // a cuda::std::span<const volatile int> pointing at
                                                                   // int.
   }
 
   //  types different (static sized)
   {
-    [[maybe_unsued]] cuda::std::span<const int, 3> s1{arr}; // a cuda::std::span<const int> pointing at int.
-    [[maybe_unsued]] cuda::std::span<volatile int, 3> s2{arr}; // a cuda::std::span<volatile int> pointing at int.
-    [[maybe_unsued]] cuda::std::span<volatile int, 3> s3{arr}; // a cuda::std::span<volatile int> pointing at const int.
-    [[maybe_unsued]] cuda::std::span<const volatile int, 3> s4{arr}; // a cuda::std::span<const volatile int> pointing
+    [[maybe_unused]] cuda::std::span<const int, 3> s1{arr}; // a cuda::std::span<const int> pointing at int.
+    [[maybe_unused]] cuda::std::span<volatile int, 3> s2{arr}; // a cuda::std::span<volatile int> pointing at int.
+    [[maybe_unused]] cuda::std::span<volatile int, 3> s3{arr}; // a cuda::std::span<volatile int> pointing at const int.
+    [[maybe_unused]] cuda::std::span<const volatile int, 3> s4{arr}; // a cuda::std::span<const volatile int> pointing
                                                                      // at int.
   }
 }
