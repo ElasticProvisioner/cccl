@@ -1,0 +1,80 @@
+name: Deploy CCCL Documentation
+
+on:
+  push:
+    branches: ["main"]
+
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: "Git ref to build from (branch, tag, or commit)"
+        required: false
+        default: "main"
+        type: string
+
+permissions:
+  contents: write
+  pages: write
+
+# Serialize all gh-pages deployments
+concurrency:
+  group: gh-pages-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Build and deploy documentation
+    runs-on: linux-amd64-cpu32
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref || github.ref }}
+          persist-credentials: false
+
+      # Determine version and deployment settings
+      - name: Determine version
+        id: version
+        env:
+          INPUT_REF: ${{ inputs.ref }}
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            # Manual dispatch - determine version from input ref
+            REF_NAME="${INPUT_REF:-main}"
+          else
+            # Automatic push - use current branch
+            REF_NAME="${{ github.ref_name }}"
+          fi
+
+          # Simple version logic: main -> unstable, everything else as-is
+          if [ "$REF_NAME" = "main" ]; then
+            version="unstable"
+          else
+            version="$REF_NAME"
+          fi
+
+          echo "version=$version" >> $GITHUB_OUTPUT
+          echo "destination_dir=docs/$version" >> $GITHUB_OUTPUT
+
+      - name: Build documentation
+        uses: ./.github/actions/docs-build
+        with:
+          target_dir: "_deploy"
+
+      # Always update root structure (version switcher, intersphinx, etc.)
+      - name: Create and deploy root structure
+        uses: ./.github/actions/docs-root-structure
+        with:
+          default_version: "unstable"
+          docs_dir: "_deploy"
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Deploy version docs
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./_deploy
+          publish_branch: gh-pages
+          destination_dir: ${{ steps.version.outputs.destination_dir }}
+          keep_files: true
+          commit_message: "Deploy ${{ steps.version.outputs.version }} docs (${{ github.sha }})"

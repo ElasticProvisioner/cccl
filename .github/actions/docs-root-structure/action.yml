@@ -1,0 +1,57 @@
+name: "CCCL Docs Root Structure"
+description: "Creates and deploys root structure for versioned documentation"
+
+inputs:
+  default_version:
+    description: "Default version to redirect to"
+    required: true
+  docs_dir:
+    description: "Directory containing built docs"
+    required: true
+  github_token:
+    description: "GitHub token for deployment"
+    required: true
+
+runs:
+  using: "composite"
+  steps:
+    - name: Create root structure
+      shell: bash --noprofile --norc -euo pipefail {0}
+      run: |
+        mkdir -p _root
+
+        # Create redirect page from template
+        cat > _root/index.html << EOF
+        <!DOCTYPE HTML>
+        <html lang="en">
+            <head>
+                <meta charset="utf-8">
+                <meta http-equiv="refresh" content="0; url=${{ inputs.default_version }}/" />
+                <link rel="canonical" href="${{ inputs.default_version }}/" />
+            </head>
+            <body>
+                <p>If this page does not refresh automatically, then please direct your browser to
+                    <a href="${{ inputs.default_version }}/">our latest docs</a>.
+                </p>
+            </body>
+        </html>
+        EOF
+
+        # Copy version switcher data
+        [ -f "docs/nv-versions.json" ] && cp docs/nv-versions.json _root/
+
+        # Copy objects.inv for intersphinx
+        [ -f "${{ inputs.docs_dir }}/objects.inv" ] && cp "${{ inputs.docs_dir }}/objects.inv" _root/
+
+        # Disable Jekyll
+        touch _root/.nojekyll
+
+    - name: Deploy root structure
+      uses: peaceiris/actions-gh-pages@v3
+      with:
+        github_token: ${{ inputs.github_token }}
+        publish_dir: ./_root
+        publish_branch: gh-pages
+        destination_dir: docs
+        keep_files: true
+        commit_message: "Deploy root files for versioned docs"

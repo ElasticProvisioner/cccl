@@ -1,11 +1,10 @@
-name: "CCCL Docs Build/Upload"
-description: "Builds the docs and uploads them as workflow artifacts."
+name: "CCCL Docs Build"
+description: "Builds the CCCL documentation to a specified directory."
 
 inputs:
-  upload_workflow_artifact:
-    description: "Uploads the built docs as a workflow artifact (actions/upload-artifact)."
-    required: false
-    default: "true"
+  target_dir:
+    description: "Directory to build documentation into"
+    required: true
 
 
 runs:
@@ -23,20 +22,11 @@ runs:
       shell: bash --noprofile --norc -euo pipefail {0}
       run: ./docs/gen_docs.bash
 
-    # Copy all docs to the right folder
-    - name: Move docs to right folder
+    # Copy all docs to target directory
+    - name: Copy docs to target directory
       shell: bash --noprofile --norc -euo pipefail {0}
       run: |
-        mkdir -p _site
-        cp -rf ./docs/_build/html/* _site/
-        touch _site/.nojekyll
-        ./docs/scrape_docs.bash ./_site
-
-    # Update docs as workflow artifact:
-    - name: Upload artifact
-      if: ${{ inputs.upload_workflow_artifact == 'true' }}
-      uses: actions/upload-artifact@v4
-      with:
-        name: docs
-        path: _site/
-        compression-level: 0
+        mkdir -p "${{ inputs.target_dir }}"
+        cp -rf ./docs/_build/html/* "${{ inputs.target_dir }}/"
+        touch "${{ inputs.target_dir }}/.nojekyll"
+        ./docs/scrape_docs.bash "${{ inputs.target_dir }}"

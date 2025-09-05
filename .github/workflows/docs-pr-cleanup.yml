@@ -1,0 +1,58 @@
+name: Clean up PR Documentation Preview
+
+on:
+  pull_request_target:
+    types: [closed]
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: "PR number to clean up"
+        required: true
+        type: string
+
+permissions:
+  contents: write
+  pull-requests: write
+  pages: write
+
+# Serialize all gh-pages deployments
+concurrency:
+  group: gh-pages-deploy
+  cancel-in-progress: false
+
+jobs:
+  cleanup:
+    name: Remove PR preview
+    runs-on: ubuntu-latest
+    steps:
+      - name: Determine PR number
+        id: pr_number
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "pr_number=${{ inputs.pr_number }}" >> $GITHUB_OUTPUT
+          else
+            echo "pr_number=${{ github.event.pull_request.number }}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Create empty directory
+        run: mkdir -p _empty
+
+      - name: Remove preview
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./_empty
+          publish_branch: gh-pages
+          destination_dir: docs/pr-preview/pr-${{ steps.pr_number.outputs.pr_number }}
+          keep_files: true
+          commit_message: "Remove doc preview for PR ${{ steps.pr_number.outputs.pr_number }}"
+
+      - name: Update preview comment
+        if: ${{ github.event_name == 'pull_request_target' }}
+        uses: marocchino/sticky-pull-request-comment@67d0dec7b07ed060a405f9b2a64b8ab319fdd7db  # v2.9.2
+        with:
+          header: pr-preview
+          number: ${{ steps.pr_number.outputs.pr_number }}
+          message: |
+            ## 📖 Doc Preview CI
+            Preview removed because the pull request was closed.
