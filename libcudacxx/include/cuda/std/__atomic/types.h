@@ -8,8 +8,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef __LIBCUDACXX___ATOMIC_TYPES_H
-#define __LIBCUDACXX___ATOMIC_TYPES_H
+#ifndef __CUDA_STD___ATOMIC_TYPES_H
+#define __CUDA_STD___ATOMIC_TYPES_H
 
 #include <cuda/std/detail/__config>
 
@@ -34,9 +34,8 @@ _CCCL_BEGIN_NAMESPACE_CUDA_STD
 template <typename _Tp>
 struct __atomic_traits
 {
-  static constexpr bool __atomic_requires_lock      = !__atomic_is_always_lock_free<_Tp>::__value;
-  static constexpr bool __atomic_requires_small     = sizeof(_Tp) < 4;
-  static constexpr bool __atomic_supports_reference = __atomic_is_always_lock_free<_Tp>::__value && sizeof(_Tp) <= 8;
+  static constexpr bool __atomic_requires_lock  = !__atomic_is_always_lock_free<_Tp>::__value;
+  static constexpr bool __atomic_requires_small = sizeof(_Tp) < 4;
 };
 
 template <typename _Tp>
@@ -49,4 +48,4 @@ _CCCL_END_NAMESPACE_CUDA_STD
 
 #include <cuda/std/__cccl/epilogue.h>
 
-#endif // __LIBCUDACXX___ATOMIC_TYPES_H
+#endif // __CUDA_STD___ATOMIC_TYPES_H

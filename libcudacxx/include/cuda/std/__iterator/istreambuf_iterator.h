@@ -8,8 +8,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCUDACXX___ITERATOR_ISTREAMBUF_ITERATOR_H
-#define _LIBCUDACXX___ITERATOR_ISTREAMBUF_ITERATOR_H
+#ifndef _CUDA_STD___ITERATOR_ISTREAMBUF_ITERATOR_H
+#define _CUDA_STD___ITERATOR_ISTREAMBUF_ITERATOR_H
 
 #include <cuda/std/detail/__config>
 
@@ -21,10 +21,10 @@
 #  pragma system_header
 #endif // no system header
 
+#include <cuda/std/__fwd/ios.h>
 #include <cuda/std/__iterator/default_sentinel.h>
 #include <cuda/std/__iterator/iterator.h>
 #include <cuda/std/__iterator/iterator_traits.h>
-#include <cuda/std/detail/libcxx/include/iosfwd>
 
 #include <cuda/std/__cccl/prologue.h>
 
@@ -158,4 +158,4 @@ _CCCL_END_NAMESPACE_CUDA_STD
 
 #include <cuda/std/__cccl/epilogue.h>
 
-#endif // _LIBCUDACXX___ITERATOR_ISTREAMBUF_ITERATOR_H
+#endif // _CUDA_STD___ITERATOR_ISTREAMBUF_ITERATOR_H

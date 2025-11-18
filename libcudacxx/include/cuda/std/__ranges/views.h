@@ -8,8 +8,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCUDACXX___RANGES_VIEWS
-#define _LIBCUDACXX___RANGES_VIEWS
+#ifndef _CUDA_STD___RANGES_VIEWS_H
+#define _CUDA_STD___RANGES_VIEWS_H
 
 #include <cuda/std/detail/__config>
 
@@ -23,9 +23,9 @@
 
 #include <cuda/std/__cccl/prologue.h>
 
-_CCCL_BEGIN_NAMESPACE_VIEWS
+_CCCL_BEGIN_NAMESPACE_CUDA_STD_VIEWS
 
-_CCCL_END_NAMESPACE_VIEWS
+_CCCL_END_NAMESPACE_CUDA_STD_VIEWS
 
 _CCCL_BEGIN_NAMESPACE_CUDA_STD
 
@@ -35,4 +35,4 @@ _CCCL_END_NAMESPACE_CUDA_STD
 
 #include <cuda/std/__cccl/epilogue.h>
 
-#endif // _LIBCUDACXX___RANGES_VIEWS
+#endif // _CUDA_STD___RANGES_VIEWS_H

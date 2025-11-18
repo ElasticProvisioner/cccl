@@ -13,8 +13,6 @@
 #  pragma system_header
 #endif // no system header
 
-#include <cuda/std/type_traits>
-
 CUB_NAMESPACE_BEGIN
 
 // Options for specifying memory aliasing
@@ -40,6 +38,13 @@ enum class SelectImpl
   SelectPotentiallyInPlace,
   // Partition, keeping rejected items. It's required that memory of input and output are disjoint.
   Partition
+};
+
+// Options for forcing inclusive prefix-scan even when initial value has been provided
+enum class ForceInclusive
+{
+  Yes,
+  No
 };
 
 CUB_NAMESPACE_END

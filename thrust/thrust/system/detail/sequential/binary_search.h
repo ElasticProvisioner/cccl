@@ -30,19 +30,16 @@
 #  pragma system_header
 #endif // no system header
 
-#include <thrust/advance.h>
 #include <thrust/detail/function.h>
-#include <thrust/distance.h>
 #include <thrust/iterator/iterator_traits.h>
+#include <thrust/system/detail/sequential/execution_policy.h>
+
+#include <cuda/std/__iterator/advance.h>
+#include <cuda/std/__iterator/distance.h>
 
 THRUST_NAMESPACE_BEGIN
-namespace system
+namespace system::detail::sequential
 {
-namespace detail
-{
-namespace sequential
-{
-
 _CCCL_EXEC_CHECK_DISABLE
 template <typename DerivedPolicy, typename ForwardIterator, typename T, typename StrictWeakOrdering>
 _CCCL_HOST_DEVICE ForwardIterator lower_bound(
@@ -135,8 +132,5 @@ _CCCL_HOST_DEVICE bool binary_search(
 
   return iter != last && !wrapped_comp(val, *iter);
 }
-
-} // end namespace sequential
-} // end namespace detail
-} // end namespace system
+} // namespace system::detail::sequential
 THRUST_NAMESPACE_END

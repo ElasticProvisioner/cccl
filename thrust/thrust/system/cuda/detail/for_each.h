@@ -36,26 +36,26 @@
 #  pragma system_header
 #endif // no system header
 
-#if _CCCL_HAS_CUDA_COMPILER()
+#if _CCCL_CUDA_COMPILATION()
 #  include <thrust/system/cuda/config.h>
 
 #  include <cub/device/device_for.cuh>
 
 #  include <thrust/detail/function.h>
-#  include <thrust/distance.h>
 #  include <thrust/system/cuda/detail/cdp_dispatch.h>
 #  include <thrust/system/cuda/detail/parallel_for.h>
 #  include <thrust/system/cuda/detail/util.h>
+
+#  include <cuda/std/__iterator/distance.h>
 
 THRUST_NAMESPACE_BEGIN
 
 namespace cuda_cub
 {
-
 // for_each_n
 _CCCL_EXEC_CHECK_DISABLE
 template <class Derived, class Input, class Size, class UnaryOp>
-Input THRUST_FUNCTION for_each_n(execution_policy<Derived>& policy, Input first, Size count, UnaryOp op)
+Input _CCCL_API _CCCL_FORCEINLINE for_each_n(execution_policy<Derived>& policy, Input first, Size count, UnaryOp op)
 {
   THRUST_CDP_DISPATCH(
     (cudaStream_t stream = cuda_cub::stream(policy);
@@ -70,7 +70,7 @@ Input THRUST_FUNCTION for_each_n(execution_policy<Derived>& policy, Input first,
 
 // for_each
 template <class Derived, class Input, class UnaryOp>
-Input THRUST_FUNCTION for_each(execution_policy<Derived>& policy, Input first, Input last, UnaryOp op)
+Input _CCCL_API _CCCL_FORCEINLINE for_each(execution_policy<Derived>& policy, Input first, Input last, UnaryOp op)
 {
   using size_type = thrust::detail::it_difference_t<Input>;
   size_type count = static_cast<size_type>(::cuda::std::distance(first, last));
@@ -80,4 +80,4 @@ Input THRUST_FUNCTION for_each(execution_policy<Derived>& policy, Input first, I
 } // namespace cuda_cub
 
 THRUST_NAMESPACE_END
-#endif
+#endif // _CCCL_CUDA_COMPILATION()

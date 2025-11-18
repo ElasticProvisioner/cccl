@@ -26,16 +26,17 @@
 #  pragma system_header
 #endif // no system header
 
-#include <cuda/std/iterator>
+#include <cuda/std/__iterator/distance.h>
+#include <cuda/std/__iterator/iterator_traits.h>
 
 THRUST_NAMESPACE_BEGIN
 
 //! deprecated [since 3.1]
 
 template <class InputIter>
-CCCL_DEPRECATED_BECAUSE("Use cuda::std::distance instead")
-[[nodiscard]] _CCCL_API constexpr typename ::cuda::std::iterator_traits<InputIter>::difference_type
-  distance(InputIter first, InputIter last)
+[[nodiscard]] CCCL_DEPRECATED_BECAUSE("Use cuda::std::distance instead")
+_CCCL_API constexpr typename ::cuda::std::iterator_traits<InputIter>::difference_type
+distance(InputIter first, InputIter last)
 {
   return ::cuda::std::distance(first, last);
 }

@@ -8,8 +8,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCUDACXX___ITERATOR_OSTREAM_ITERATOR_H
-#define _LIBCUDACXX___ITERATOR_OSTREAM_ITERATOR_H
+#ifndef _CUDA_STD___ITERATOR_OSTREAM_ITERATOR_H
+#define _CUDA_STD___ITERATOR_OSTREAM_ITERATOR_H
 
 #include <cuda/std/detail/__config>
 
@@ -22,11 +22,11 @@
 #endif // no system header
 
 #include <cuda/std/__fwd/char_traits.h>
+#include <cuda/std/__fwd/ios.h>
 #include <cuda/std/__iterator/iterator.h>
 #include <cuda/std/__iterator/iterator_traits.h>
 #include <cuda/std/__memory/addressof.h>
 #include <cuda/std/cstddef>
-#include <cuda/std/detail/libcxx/include/iosfwd>
 
 #include <cuda/std/__cccl/prologue.h>
 
@@ -56,11 +56,11 @@ private:
 
 public:
   _CCCL_API ostream_iterator(ostream_type& __s) noexcept
-      : __out_stream_(_CUDA_VSTD::addressof(__s))
+      : __out_stream_(::cuda::std::addressof(__s))
       , __delim_(nullptr)
   {}
   _CCCL_API ostream_iterator(ostream_type& __s, const _CharT* __delimiter) noexcept
-      : __out_stream_(_CUDA_VSTD::addressof(__s))
+      : __out_stream_(::cuda::std::addressof(__s))
       , __delim_(__delimiter)
   {}
   _CCCL_API ostream_iterator& operator=(const _Tp& __value)
@@ -92,4 +92,4 @@ _CCCL_END_NAMESPACE_CUDA_STD
 
 #include <cuda/std/__cccl/epilogue.h>
 
-#endif // _LIBCUDACXX___ITERATOR_OSTREAM_ITERATOR_H
+#endif // _CUDA_STD___ITERATOR_OSTREAM_ITERATOR_H

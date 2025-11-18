@@ -25,17 +25,22 @@ if (NOT CCCL_TOPLEVEL_PROJECT)
   include(cmake/CCCLAddSubdir.cmake)
 endif()
 
-# We require a higher cmake version for dev builds
 if (CCCL_TOPLEVEL_PROJECT)
+  # We require a higher cmake version for dev builds
   cmake_minimum_required(VERSION 3.21)
+
+  # Handle special CCCL values for CMAKE_CUDA_ARCHITECTURES
+  include(cmake/CCCLCheckCudaArchitectures.cmake)
+  cccl_check_cuda_architectures()
 endif()
 
-option(CCCL_ENABLE_LIBCUDACXX "Enable the libcu++ developer build." ${CCCL_TOPLEVEL_PROJECT})
-option(CCCL_ENABLE_CUB "Enable the CUB developer build." ${CCCL_TOPLEVEL_PROJECT})
-option(CCCL_ENABLE_THRUST "Enable the Thrust developer build." ${CCCL_TOPLEVEL_PROJECT})
-option(CCCL_ENABLE_TESTING "Enable CUDA C++ Core Library tests." ${CCCL_TOPLEVEL_PROJECT})
-option(CCCL_ENABLE_EXAMPLES "Enable CUDA C++ Core Library examples." ${CCCL_TOPLEVEL_PROJECT})
-option(CCCL_ENABLE_C "Enable CUDA C Core Library." OFF)
+option(CCCL_ENABLE_LIBCUDACXX "Enable the libcu++ developer build." OFF)
+option(CCCL_ENABLE_CUB "Enable the CUB developer build." OFF)
+option(CCCL_ENABLE_THRUST "Enable the Thrust developer build." OFF)
+option(CCCL_ENABLE_TESTING "Enable CUDA C++ Core Library tests." OFF)
+option(CCCL_ENABLE_EXAMPLES "Enable CUDA C++ Core Library examples." OFF)
+option(CCCL_ENABLE_C_PARALLEL "Enable CUDA C Parallel Library." OFF)
+option(CCCL_ENABLE_C_EXPERIMENTAL_STF "Enable CUDA C CUDASTF Library." OFF)
 
 if ("NVHPC" STREQUAL "${CMAKE_CXX_COMPILER_ID}")
   set(CCCL_ENABLE_BENCHMARKS OFF)
@@ -43,9 +48,17 @@ else()
   option(CCCL_ENABLE_BENCHMARKS "Enable CUDA C++ Core Library benchmarks." OFF)
 endif()
 
-option(CCCL_ENABLE_UNSTABLE "Enable targets and developer build options for unstable projects." OFF)
+option(
+  CCCL_ENABLE_UNSTABLE
+  "Enable targets and developer build options for unstable projects."
+  OFF
+)
 if (CCCL_ENABLE_UNSTABLE)
-  option(CCCL_ENABLE_CUDAX "Enable the CUDA Experimental developer build." ${CCCL_TOPLEVEL_PROJECT})
+  option(
+    CCCL_ENABLE_CUDAX
+    "Enable the CUDA Experimental developer build."
+    ${CCCL_TOPLEVEL_PROJECT}
+  )
 else()
   # Always off if unstable disabled:
   # Note that this doesn't override the cache variable, but rather creates a new
@@ -55,6 +68,8 @@ endif()
 
 include(CTest)
 enable_testing()
+
+option(CCCL_USE_LIBCXX "Use libc++ when compiling and linking" OFF)
 
 if (CCCL_TOPLEVEL_PROJECT)
   include(cmake/AppendOptionIfAvailable.cmake)
@@ -78,7 +93,7 @@ if (CCCL_ENABLE_UNSTABLE)
   add_subdirectory(cudax)
 endif()
 
-if (CCCL_ENABLE_C)
+if (CCCL_ENABLE_C_PARALLEL OR CCCL_ENABLE_C_EXPERIMENTAL_STF)
   add_subdirectory(c)
 endif()
 

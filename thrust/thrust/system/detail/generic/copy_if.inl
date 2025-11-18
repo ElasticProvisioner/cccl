@@ -29,7 +29,6 @@
 #include <thrust/detail/internal_functional.h>
 #include <thrust/detail/temporary_array.h>
 #include <thrust/detail/type_traits.h>
-#include <thrust/distance.h>
 #include <thrust/functional.h>
 #include <thrust/iterator/iterator_traits.h>
 #include <thrust/scan.h>
@@ -37,18 +36,16 @@
 #include <thrust/system/detail/generic/copy_if.h>
 #include <thrust/transform.h>
 
+#include <cuda/std/__functional/operations.h>
+#include <cuda/std/__iterator/distance.h>
+#include <cuda/std/__type_traits/make_unsigned.h>
 #include <cuda/std/limits>
 
 THRUST_NAMESPACE_BEGIN
-namespace system
+namespace system::detail::generic
 {
 namespace detail
 {
-namespace generic
-{
-namespace detail
-{
-
 template <typename IndexType,
           typename DerivedPolicy,
           typename InputIterator1,
@@ -88,7 +85,6 @@ _CCCL_HOST_DEVICE OutputIterator copy_if(
 
   return result + output_size;
 }
-
 } // end namespace detail
 
 template <typename DerivedPolicy, typename InputIterator, typename OutputIterator, typename Predicate>
@@ -145,8 +141,5 @@ _CCCL_HOST_DEVICE OutputIterator copy_if(
 
   return result;
 } // end copy_if()
-
-} // end namespace generic
-} // end namespace detail
-} // end namespace system
+} // namespace system::detail::generic
 THRUST_NAMESPACE_END

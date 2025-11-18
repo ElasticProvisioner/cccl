@@ -4,8 +4,13 @@
 # .inl files are not globbed for, because they are not supposed to be used as public
 # entrypoints.
 
+# Add regexes matching deprecated headers here to disable warnings for them:
+set(deprecated_headers_regexes "thrust/iterator/tabulate_output_iterator\\.h")
+
 # Meta target for all configs' header builds:
 add_custom_target(thrust.all.headers)
+
+find_package(CUDAToolkit)
 
 function(thrust_add_header_test thrust_target label definitions)
   thrust_get_target_property(config_host ${thrust_target} HOST)
@@ -18,33 +23,38 @@ function(thrust_add_header_test thrust_target label definitions)
   string(TOLOWER "${config_device}" device_lower)
 
   if (config_device STREQUAL "CUDA")
-    set(lang CUDA)
+    set(langs CUDA)
   else()
-    set(lang CXX)
+    # Compile headers with both host and cuda compilers for CPU backends.
+    set(langs CXX CUDA)
   endif()
 
   # GLOB ALL THE THINGS
   set(headers_globs thrust/*.h)
   set(headers_exclude_systems_globs thrust/system/*/*)
-  set(headers_systems_globs
+  set(
+    headers_systems_globs
     thrust/system/${host_lower}/*
     thrust/system/${device_lower}/*
   )
-  set(headers_exclude_details_globs
+  set(
+    headers_exclude_details_globs
     thrust/detail/*
     thrust/*/detail/*
     thrust/*/*/detail/*
   )
 
   # Get all .h files...
-  file(GLOB_RECURSE headers
+  file(
+    GLOB_RECURSE headers
     RELATIVE "${Thrust_SOURCE_DIR}"
     CONFIGURE_DEPENDS
     ${headers_globs}
   )
 
   # ...then remove all system specific headers...
-  file(GLOB_RECURSE headers_exclude_systems
+  file(
+    GLOB_RECURSE headers_exclude_systems
     RELATIVE "${Thrust_SOURCE_DIR}"
     CONFIGURE_DEPENDS
     ${headers_exclude_systems_globs}
@@ -52,7 +62,8 @@ function(thrust_add_header_test thrust_target label definitions)
   list(REMOVE_ITEM headers ${headers_exclude_systems})
 
   # ...then add all headers specific to the selected host and device systems back again...
-  file(GLOB_RECURSE headers_systems
+  file(
+    GLOB_RECURSE headers_systems
     RELATIVE "${Thrust_SOURCE_DIR}"
     CONFIGURE_DEPENDS
     ${headers_systems_globs}
@@ -60,7 +71,8 @@ function(thrust_add_header_test thrust_target label definitions)
   list(APPEND headers ${headers_systems})
 
   # ...and remove all the detail headers (also removing the detail headers from the selected systems).
-  file(GLOB_RECURSE headers_exclude_details
+  file(
+    GLOB_RECURSE headers_exclude_details
     RELATIVE "${Thrust_SOURCE_DIR}"
     CONFIGURE_DEPENDS
     ${headers_exclude_details_globs}
@@ -68,23 +80,20 @@ function(thrust_add_header_test thrust_target label definitions)
   list(REMOVE_ITEM headers ${headers_exclude_details})
 
   # List of headers that aren't implemented for all backends, but are implemented for CUDA.
-  set(partially_implemented_CUDA
-  )
+  set(partially_implemented_CUDA)
 
   # List of headers that aren't implemented for all backends, but are implemented for CPP.
-  set(partially_implemented_CPP
-  )
+  set(partially_implemented_CPP)
 
   # List of headers that aren't implemented for all backends, but are implemented for TBB.
-  set(partially_implemented_TBB
-  )
+  set(partially_implemented_TBB)
 
   # List of headers that aren't implemented for all backends, but are implemented for OMP.
-  set(partially_implemented_OMP
-  )
+  set(partially_implemented_OMP)
 
   # List of all partially implemented headers.
-  set(partially_implemented
+  set(
+    partially_implemented
     ${partially_implemented_CUDA}
     ${partially_implemented_CPP}
     ${partially_implemented_TBB}
@@ -106,35 +115,75 @@ function(thrust_add_header_test thrust_target label definitions)
     list(APPEND headers ${header})
   endforeach()
 
-  set(headertest_target ${config_prefix}.headers.${label})
-  cccl_generate_header_tests(${headertest_target} thrust
-    LANGUAGE ${lang}
-    HEADERS ${headers}
-  )
-  target_link_libraries(${headertest_target} PUBLIC ${thrust_target})
-  thrust_clone_target_properties(${headertest_target} ${thrust_target})
+  foreach (lang IN LISTS langs)
+    set(headertest_target ${config_prefix}.headers.${label})
+    if (lang STREQUAL "CUDA" AND (NOT config_device STREQUAL "CUDA"))
+      # Append .cuda to the header test target name when compiling
+      # CPU backends with cuda compilers.
+      set(headertest_target ${headertest_target}.cuda)
+    endif()
 
-  if ("CUDA" STREQUAL "${config_device}")
-    thrust_configure_cuda_target(${headertest_target} RDC ${THRUST_FORCE_RDC})
-  endif()
+    cccl_generate_header_tests(
+      ${headertest_target}
+      thrust
+      LANGUAGE ${lang}
+      HEADERS ${headers}
+      PER_HEADER_DEFINES
+        DEFINE
+        CCCL_IGNORE_DEPRECATED_API
+        ${deprecated_headers_regexes}
+    )
+    cccl_configure_target(${headertest_target} DIALECT ${config_dialect})
+    target_link_libraries(${headertest_target} PUBLIC ${thrust_target})
+    thrust_clone_target_properties(${headertest_target} ${thrust_target})
+    if (definitions)
+      target_compile_definitions(${headertest_target} PRIVATE ${definitions})
+    endif()
 
-  # Disable macro checks on TBB; the TBB atomic implementation uses `I` and
-  # our checks will issue false errors.
-  if ("TBB" IN_LIST config_systems)
-    target_compile_definitions(${headertest_target} PRIVATE CCCL_IGNORE_HEADER_MACRO_CHECKS)
-  endif()
+    if (lang STREQUAL "CUDA")
+      thrust_configure_cuda_target(${headertest_target} RDC ${THRUST_FORCE_RDC})
+    endif()
 
-  add_dependencies(thrust.all.headers ${headertest_target})
-  add_dependencies(${config_prefix}.all ${headertest_target})
+    if ("TBB" IN_LIST config_systems)
+      # Disable macro checks on TBB; the TBB atomic implementation uses `I` and
+      # our checks will issue false errors.
+      target_compile_definitions(
+        ${headertest_target}
+        PRIVATE CCCL_IGNORE_HEADER_MACRO_CHECKS
+      )
+
+      # error #550-D: variable "alloc" was set but never used (in TBB headers)
+      # Only very specific configs are emitting this:
+      if (
+        lang STREQUAL "CUDA"
+        AND
+          "${CUDAToolkit_VERSION_MAJOR}.${CUDAToolkit_VERSION_MINOR}"
+            VERSION_EQUAL
+            "12.0"
+        AND MSVC_VERSION EQUAL 1939
+        AND config_dialect EQUAL 20
+      )
+        target_compile_options(
+          ${headertest_target}
+          PRIVATE $<$<COMPILE_LANGUAGE:CUDA>:-diag-suppress 550>
+        )
+      endif()
+    endif()
+
+    add_dependencies(thrust.all.headers ${headertest_target})
+    add_dependencies(${config_prefix}.all ${headertest_target})
+  endforeach()
 endfunction()
 
-foreach(thrust_target IN LISTS THRUST_TARGETS)
+foreach (thrust_target IN LISTS THRUST_TARGETS)
   thrust_add_header_test(${thrust_target} base "")
 
   # Wrap Thrust/CUB in a custom namespace to check proper use of ns macros:
-  set(header_definitions
+  set(
+    header_definitions
     "THRUST_WRAPPED_NAMESPACE=wrapped_thrust"
-    "CUB_WRAPPED_NAMESPACE=wrapped_cub")
+    "CUB_WRAPPED_NAMESPACE=wrapped_cub"
+  )
   thrust_add_header_test(${thrust_target} wrap "${header_definitions}")
 
   thrust_get_target_property(config_device ${thrust_target} DEVICE)
@@ -147,4 +196,4 @@ foreach(thrust_target IN LISTS THRUST_TARGETS)
     set(header_definitions "CCCL_DISABLE_FP16_SUPPORT")
     thrust_add_header_test(${thrust_target} no_half "${header_definitions}")
   endif()
-endforeach ()
+endforeach()

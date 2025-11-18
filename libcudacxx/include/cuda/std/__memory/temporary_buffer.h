@@ -5,12 +5,12 @@
 // under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-// SPDX-FileCopyrightText: Copyright (c) 2024 NVIDIA CORPORATION & AFFILIATES.
+// SPDX-FileCopyrightText: Copyright (c) 2024-25 NVIDIA CORPORATION & AFFILIATES.
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCUDACXX___MEMORY_TEMPORARY_BUFFER_H
-#define _LIBCUDACXX___MEMORY_TEMPORARY_BUFFER_H
+#ifndef _CUDA_STD___MEMORY_TEMPORARY_BUFFER_H
+#define _CUDA_STD___MEMORY_TEMPORARY_BUFFER_H
 
 #include <cuda/std/detail/__config>
 
@@ -24,14 +24,12 @@
 
 #include <cuda/std/__iterator/iterator.h>
 #include <cuda/std/__iterator/iterator_traits.h>
-#include <cuda/std/__memory/addressof.h>
-#include <cuda/std/__new_>
+#include <cuda/std/__new/allocate.h>
+#include <cuda/std/__new/device_new.h>
 #include <cuda/std/__type_traits/alignment_of.h>
-#include <cuda/std/__utility/move.h>
 #include <cuda/std/__utility/pair.h>
 #include <cuda/std/climits>
 #include <cuda/std/cstddef>
-#include <cuda/std/limits>
 
 #include <cuda/std/__cccl/prologue.h>
 
@@ -51,8 +49,8 @@ template <class _Tp>
 #if _LIBCUDACXX_HAS_ALIGNED_ALLOCATION()
     if (__is_overaligned_for_new(alignof(_Tp)))
     {
-      _CUDA_VSTD::align_val_t __al = _CUDA_VSTD::align_val_t(_CUDA_VSTD::alignment_of<_Tp>::value);
-      __r.first                    = static_cast<_Tp*>(::operator new(__n * sizeof(_Tp), __al));
+      ::cuda::std::align_val_t __al = ::cuda::std::align_val_t(::cuda::std::alignment_of<_Tp>::value);
+      __r.first                     = static_cast<_Tp*>(::operator new(__n * sizeof(_Tp), __al));
     }
     else
     {
@@ -82,11 +80,20 @@ template <class _Tp>
 template <class _Tp>
 _CCCL_API inline void return_temporary_buffer(_Tp* __p) noexcept
 {
-  _CUDA_VSTD::__cccl_deallocate_unsized((void*) __p, alignof(_Tp));
+  ::cuda::std::__cccl_deallocate_unsized((void*) __p, alignof(_Tp));
 }
+
+struct __return_temporary_buffer
+{
+  template <class _Tp>
+  _CCCL_API void operator()(_Tp* __p) const noexcept
+  {
+    ::cuda::std::return_temporary_buffer(__p);
+  }
+};
 
 _CCCL_END_NAMESPACE_CUDA_STD
 
 #include <cuda/std/__cccl/epilogue.h>
 
-#endif // _LIBCUDACXX___MEMORY_TEMPORARY_BUFFER_H
+#endif // _CUDA_STD___MEMORY_TEMPORARY_BUFFER_H

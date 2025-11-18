@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCUDACXX___UTILITY_INTEGER_SEQUENCE_H
-#define _LIBCUDACXX___UTILITY_INTEGER_SEQUENCE_H
+#ifndef _CUDA_STD___UTILITY_INTEGER_SEQUENCE_H
+#define _CUDA_STD___UTILITY_INTEGER_SEQUENCE_H
 
 #include <cuda/std/detail/__config>
 
@@ -57,7 +57,6 @@ using __make_indices_imp _CCCL_NODEBUG_ALIAS =
 
 namespace __detail
 {
-
 template <typename _Tp, size_t... _Extra>
 struct __repeat;
 template <typename _Tp, _Tp... _Np, size_t... _Extra>
@@ -181,7 +180,6 @@ struct __parity<7>
       : __repeat<typename __make<_Np / 8>::type, _Np - 7, _Np - 6, _Np - 5, _Np - 4, _Np - 3, _Np - 2, _Np - 1>
   {};
 };
-
 } // namespace __detail
 
 template <size_t _Ep, size_t _Sp>
@@ -194,7 +192,7 @@ template <class _Tp, _Tp... _Ip>
 struct _CCCL_TYPE_VISIBILITY_DEFAULT integer_sequence
 {
   using value_type = _Tp;
-  static_assert(is_integral<_Tp>::value, "std::integer_sequence can only be instantiated with an integral type");
+  static_assert(is_integral_v<_Tp>, "std::integer_sequence can only be instantiated with an integral type");
   static _CCCL_API constexpr size_t size() noexcept
   {
     return sizeof...(_Ip);
@@ -223,7 +221,7 @@ using __make_integer_sequence_unchecked _CCCL_NODEBUG_ALIAS =
 template <class _Tp, _Tp _Ep>
 struct __make_integer_sequence_checked
 {
-  static_assert(is_integral<_Tp>::value, "std::make_integer_sequence can only be instantiated with an integral type");
+  static_assert(is_integral_v<_Tp>, "std::make_integer_sequence can only be instantiated with an integral type");
   static_assert(0 <= _Ep, "std::make_integer_sequence must have a non-negative sequence length");
   // Workaround GCC bug by preventing bad installations when 0 <= _Ep
   // https://gcc.gnu.org/bugzilla/show_bug.cgi?id=68929
@@ -248,4 +246,4 @@ _CCCL_END_NAMESPACE_CUDA_STD
 
 #include <cuda/std/__cccl/epilogue.h>
 
-#endif // _LIBCUDACXX___UTILITY_INTEGER_SEQUENCE_H
+#endif // _CUDA_STD___UTILITY_INTEGER_SEQUENCE_H

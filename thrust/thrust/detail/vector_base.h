@@ -35,11 +35,13 @@
 #include <thrust/detail/type_traits.h>
 #include <thrust/iterator/detail/normal_iterator.h>
 #include <thrust/iterator/iterator_traits.h>
-#include <thrust/iterator/reverse_iterator.h>
 
 #include <cuda/std/__iterator/iterator_traits.h>
+#include <cuda/std/__iterator/reverse_iterator.h>
+#include <cuda/std/__type_traits/enable_if.h>
+#include <cuda/std/__utility/move.h>
+#include <cuda/std/__utility/swap.h>
 #include <cuda/std/initializer_list>
-#include <cuda/std/utility>
 
 #include <vector>
 
@@ -58,7 +60,6 @@ inline constexpr no_init_t no_init;
 
 namespace detail
 {
-
 template <typename T, typename Alloc>
 class vector_base
 {
@@ -79,8 +80,8 @@ public:
   using iterator       = typename storage_type::iterator;
   using const_iterator = typename storage_type::const_iterator;
 
-  using reverse_iterator       = thrust::reverse_iterator<iterator>;
-  using const_reverse_iterator = thrust::reverse_iterator<const_iterator>;
+  using reverse_iterator       = ::cuda::std::reverse_iterator<iterator>;
+  using const_reverse_iterator = ::cuda::std::reverse_iterator<const_iterator>;
 
   /*! This constructor creates an empty vector_base.
    */
@@ -210,8 +211,7 @@ public:
    *  \param first The beginning of the range.
    *  \param last The end of the range.
    */
-  template <typename InputIterator,
-            ::cuda::std::enable_if_t<::cuda::std::__is_cpp17_input_iterator<InputIterator>::value, int> = 0>
+  template <typename InputIterator, ::cuda::std::enable_if_t<::cuda::std::__has_input_traversal<InputIterator>, int> = 0>
   vector_base(InputIterator first, InputIterator last);
 
   /*! This constructor builds a vector_base from a range.
@@ -219,8 +219,7 @@ public:
    *  \param last The end of the range.
    *  \param alloc The allocator to use by this vector_base.
    */
-  template <typename InputIterator,
-            ::cuda::std::enable_if_t<::cuda::std::__is_cpp17_input_iterator<InputIterator>::value, int> = 0>
+  template <typename InputIterator, ::cuda::std::enable_if_t<::cuda::std::__has_input_traversal<InputIterator>, int> = 0>
   vector_base(InputIterator first, InputIterator last, const Alloc& alloc);
 
   /*! The destructor erases the elements.
@@ -607,7 +606,6 @@ bool operator!=(const vector_base<T1, Alloc1>& lhs, const std::vector<T2, Alloc2
 
 template <typename T1, typename Alloc1, typename T2, typename Alloc2>
 bool operator!=(const std::vector<T1, Alloc1>& lhs, const vector_base<T2, Alloc2>& rhs);
-
 } // namespace detail
 
 THRUST_NAMESPACE_END

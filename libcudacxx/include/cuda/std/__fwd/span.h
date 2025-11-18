@@ -8,8 +8,8 @@
 //
 //===---------------------------------------------------------------------===//
 
-#ifndef _LIBCUDACXX___FWD_SPAN_H
-#define _LIBCUDACXX___FWD_SPAN_H
+#ifndef _CUDA_STD___FWD_SPAN_H
+#define _CUDA_STD___FWD_SPAN_H
 
 #include <cuda/std/detail/__config>
 
@@ -33,13 +33,13 @@ template <typename _Tp, size_t _Extent = dynamic_extent>
 class span;
 
 template <class _Tp>
-inline constexpr bool __is_std_span_v = false;
+inline constexpr bool __is_cuda_std_span_v = false;
 
 template <class _Tp, size_t _Extent>
-inline constexpr bool __is_std_span_v<span<_Tp, _Extent>> = true;
+inline constexpr bool __is_cuda_std_span_v<span<_Tp, _Extent>> = true;
 
 _CCCL_END_NAMESPACE_CUDA_STD
 
 #include <cuda/std/__cccl/epilogue.h>
 
-#endif // _LIBCUDACXX___FWD_SPAN_H
+#endif // _CUDA_STD___FWD_SPAN_H

@@ -30,7 +30,6 @@
 #  pragma system_header
 #endif // no system header
 
-#include <thrust/detail/memory_wrapper.h> // for ::new
 #include <thrust/detail/raw_reference_cast.h>
 #include <thrust/detail/static_assert.h>
 #include <thrust/detail/type_traits.h>
@@ -38,11 +37,20 @@
 #include <thrust/iterator/iterator_traits.h>
 #include <thrust/tuple.h>
 
+#include <cuda/__functional/address_stability.h>
 #include <cuda/__iterator/discard_iterator.h>
 #include <cuda/__iterator/tabulate_output_iterator.h>
 #include <cuda/__iterator/transform_input_output_iterator.h>
 #include <cuda/__iterator/transform_output_iterator.h>
-#include <cuda/std/type_traits>
+#include <cuda/std/__cccl/memory_wrapper.h> // for ::new
+#include <cuda/std/__new/device_new.h>
+#include <cuda/std/__tuple_dir/get.h>
+#include <cuda/std/__tuple_dir/tuple_element.h>
+#include <cuda/std/__type_traits/enable_if.h>
+#include <cuda/std/__type_traits/is_const.h>
+#include <cuda/std/__type_traits/is_convertible.h>
+#include <cuda/std/__type_traits/is_reference.h>
+#include <cuda/std/__type_traits/type_identity.h>
 
 THRUST_NAMESPACE_BEGIN
 
@@ -90,6 +98,25 @@ struct tuple_binary_predicate
   }
 
   mutable Predicate pred;
+};
+
+template <class Predicate, class NewType, class OutputType>
+struct new_value_if_f
+{
+  Predicate pred;
+  NewType new_value;
+
+  template <class T>
+  _CCCL_DEVICE_API OutputType operator()(T const& x)
+  {
+    return pred(x) ? new_value : x;
+  }
+
+  template <class T, class P>
+  _CCCL_DEVICE_API OutputType operator()(T const& x, P const& y)
+  {
+    return pred(y) ? new_value : x;
+  }
 };
 
 // We need to mark proxy iterators as such
@@ -219,7 +246,7 @@ struct device_destroy_functor
 
 template <typename System, typename T>
 struct destroy_functor
-    : thrust::detail::eval_if<::cuda::std::is_convertible<System, thrust::host_system_tag>::value,
+    : thrust::detail::eval_if<::cuda::std::is_convertible_v<System, thrust::host_system_tag>,
                               ::cuda::std::type_identity<host_destroy_functor<T>>,
                               ::cuda::std::type_identity<device_destroy_functor<T>>>
 {};
@@ -287,7 +314,22 @@ struct compare_first
     return comp(thrust::raw_reference_cast(::cuda::std::get<0>(x)), thrust::raw_reference_cast(::cuda::std::get<0>(y)));
   }
 }; // end compare_first
-
 } // end namespace detail
-
 THRUST_NAMESPACE_END
+
+_CCCL_BEGIN_NAMESPACE_CUDA
+template <typename Predicate, typename IntegralType>
+struct proclaims_copyable_arguments<THRUST_NS_QUALIFIER::detail::predicate_to_integral<Predicate, IntegralType>>
+    : proclaims_copyable_arguments<Predicate>
+{};
+
+template <typename Predicate>
+struct proclaims_copyable_arguments<THRUST_NS_QUALIFIER::detail::tuple_binary_predicate<Predicate>>
+    : proclaims_copyable_arguments<Predicate>
+{};
+
+template <class Predicate, class NewType, class OutputType>
+struct proclaims_copyable_arguments<THRUST_NS_QUALIFIER::detail::new_value_if_f<Predicate, NewType, OutputType>>
+    : proclaims_copyable_arguments<Predicate>
+{};
+_CCCL_END_NAMESPACE_CUDA

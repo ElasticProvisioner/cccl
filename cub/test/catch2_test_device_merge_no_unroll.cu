@@ -10,7 +10,6 @@
 
 #include <cub/device/device_merge.cuh>
 
-#include <thrust/iterator/counting_iterator.h>
 #include <thrust/sort.h>
 
 #include <algorithm>
@@ -67,8 +66,7 @@ struct fallback_test_policy_hub
 {
   struct max_policy : cub::ChainedPolicy<100, max_policy, max_policy>
   {
-    using merge_policy = cub::detail::merge::
-      agent_policy_t<128, 7, cub::BLOCK_LOAD_WARP_TRANSPOSE, cub::LOAD_DEFAULT, cub::BLOCK_STORE_WARP_TRANSPOSE>;
+    using merge_policy = cub::detail::merge::agent_policy_t<128, 7, cub::LOAD_DEFAULT, cub::BLOCK_STORE_WARP_TRANSPOSE>;
   };
 };
 

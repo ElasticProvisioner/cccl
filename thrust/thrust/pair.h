@@ -30,7 +30,10 @@
 #  pragma system_header
 #endif // no system header
 
-#include <cuda/std/utility>
+#include <cuda/std/__tuple_dir/get.h>
+#include <cuda/std/__tuple_dir/tuple_element.h>
+#include <cuda/std/__tuple_dir/tuple_size.h>
+#include <cuda/std/__utility/pair.h>
 
 THRUST_NAMESPACE_BEGIN
 
@@ -51,9 +54,9 @@ THRUST_NAMESPACE_BEGIN
  */
 #ifdef _CCCL_DOXYGEN_INVOKED // Provide a fake alias for doxygen
 template <size_t N, class T>
-using tuple_element = _CUDA_VSTD::tuple_element<N, T>;
+using tuple_element = ::cuda::std::tuple_element<N, T>;
 #else // ^^^ _CCCL_DOXYGEN_INVOKED ^^^ / vvv !_CCCL_DOXYGEN_INVOKED vvv
-using _CUDA_VSTD::tuple_element;
+using ::cuda::std::tuple_element;
 #endif // _CCCL_DOXYGEN_INVOKED
 
 /*! This convenience metafunction is included for compatibility with
@@ -64,9 +67,9 @@ using _CUDA_VSTD::tuple_element;
  */
 #ifdef _CCCL_DOXYGEN_INVOKED // Provide a fake alias for doxygen
 template <class T>
-using tuple_size = _CUDA_VSTD::tuple_size<T>;
+using tuple_size = ::cuda::std::tuple_size<T>;
 #else // ^^^ _CCCL_DOXYGEN_INVOKED ^^^ / vvv !_CCCL_DOXYGEN_INVOKED vvv
-using _CUDA_VSTD::tuple_size;
+using ::cuda::std::tuple_size;
 #endif // _CCCL_DOXYGEN_INVOKED
 
 /*! \p pair is a generic data structure encapsulating a heterogeneous
@@ -82,16 +85,13 @@ using _CUDA_VSTD::tuple_size;
  */
 #ifdef _CCCL_DOXYGEN_INVOKED // Provide a fake alias for doxygen
 template <class T, class U>
-using pair = _CUDA_VSTD::pair<T, U>;
+using pair = ::cuda::std::pair<T, U>;
 #else // ^^^ _CCCL_DOXYGEN_INVOKED ^^^ / vvv !_CCCL_DOXYGEN_INVOKED vvv
-using _CUDA_VSTD::pair;
+using ::cuda::std::pair;
 #endif // _CCCL_DOXYGEN_INVOKED
 
-using _CUDA_VSTD::get;
-using _CUDA_VSTD::make_pair;
-
-/*! \endcond
- */
+using ::cuda::std::get;
+using ::cuda::std::make_pair;
 
 /*! \} // pair
  */

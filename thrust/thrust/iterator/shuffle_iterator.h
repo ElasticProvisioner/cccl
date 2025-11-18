@@ -33,7 +33,12 @@
 #include <thrust/iterator/iterator_adaptor.h>
 #include <thrust/iterator/iterator_traits.h>
 
-#include <cuda/std/type_traits>
+#include <cuda/std/__type_traits/conditional.h>
+#include <cuda/std/__type_traits/enable_if.h>
+#include <cuda/std/__type_traits/is_constructible.h>
+#include <cuda/std/__type_traits/is_integral.h>
+#include <cuda/std/__utility/forward.h>
+#include <cuda/std/cstdint>
 
 THRUST_NAMESPACE_BEGIN
 
@@ -125,7 +130,10 @@ struct make_shuffle_iterator_base
 //!
 //! \see make_shuffle_iterator
 template <class IndexType, class BijectionFunc = thrust::detail::random_bijection<IndexType>>
-class shuffle_iterator : public detail::make_shuffle_iterator_base<IndexType, BijectionFunc>::type
+class shuffle_iterator
+#ifndef _CCCL_DOXYGEN_INVOKED // Doxygen breaks here for whatever reason
+    : public detail::make_shuffle_iterator_base<IndexType, BijectionFunc>::type
+#endif // _CCCL_DOXYGEN_INVOKED
 {
   //! \cond
   using super_t = typename detail::make_shuffle_iterator_base<IndexType, BijectionFunc>::type;
@@ -152,9 +160,8 @@ public:
       , bijection(std::move(bijection))
   {}
 
-  //! \cond
-
 private:
+#ifndef _CCCL_DOXYGEN_INVOKED // Do not document
   _CCCL_HOST_DEVICE IndexType dereference() const
   {
     assert(this->base() < bijection.size());
@@ -162,8 +169,7 @@ private:
   }
 
   BijectionFunc bijection;
-
-  //! \endcond
+#endif // _CCCL_DOXYGEN_INVOKED
 };
 
 //! \p make_shuffle_iterator creates a \p shuffle_iterator from an \c IndexType and \c URBG.

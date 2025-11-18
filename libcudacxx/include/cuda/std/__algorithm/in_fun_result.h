@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCUDACXX___ALGORITHM_IN_FUN_RESULT_H
-#define _LIBCUDACXX___ALGORITHM_IN_FUN_RESULT_H
+#ifndef _CUDA_STD___ALGORITHM_IN_FUN_RESULT_H
+#define _CUDA_STD___ALGORITHM_IN_FUN_RESULT_H
 
 #include <cuda/std/detail/__config>
 
@@ -25,7 +25,7 @@
 
 #include <cuda/std/__cccl/prologue.h>
 
-_CCCL_BEGIN_NAMESPACE_RANGES
+_CCCL_BEGIN_NAMESPACE_CUDA_STD_RANGES
 
 template <class _InIter1, class _Func1>
 struct in_fun_result
@@ -44,12 +44,12 @@ struct in_fun_result
   _CCCL_REQUIRES(convertible_to<_InIter1, _InIter2> _CCCL_AND convertible_to<_Func1, _Func2>)
   _CCCL_API constexpr operator in_fun_result<_InIter2, _Func2>() &&
   {
-    return {_CUDA_VSTD::move(in), _CUDA_VSTD::move(fun)};
+    return {::cuda::std::move(in), ::cuda::std::move(fun)};
   }
 };
 
-_CCCL_END_NAMESPACE_RANGES
+_CCCL_END_NAMESPACE_CUDA_STD_RANGES
 
 #include <cuda/std/__cccl/epilogue.h>
 
-#endif // _LIBCUDACXX___ALGORITHM_IN_FUN_RESULT_H
+#endif // _CUDA_STD___ALGORITHM_IN_FUN_RESULT_H

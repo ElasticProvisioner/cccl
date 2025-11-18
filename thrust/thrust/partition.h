@@ -30,12 +30,14 @@
 #  pragma system_header
 #endif // no system header
 #include <thrust/detail/execution_policy.h>
-#include <thrust/pair.h>
+
+#include <cuda/std/__utility/pair.h>
 
 THRUST_NAMESPACE_BEGIN
 
 /*! \addtogroup reordering
  *  \ingroup algorithms
+ *  \{
  *
  *  \addtogroup partitioning
  *  \ingroup reordering
@@ -360,7 +362,7 @@ template <typename DerivedPolicy,
           typename OutputIterator1,
           typename OutputIterator2,
           typename Predicate>
-_CCCL_HOST_DEVICE thrust::pair<OutputIterator1, OutputIterator2> partition_copy(
+_CCCL_HOST_DEVICE ::cuda::std::pair<OutputIterator1, OutputIterator2> partition_copy(
   const thrust::detail::execution_policy_base<DerivedPolicy>& exec,
   InputIterator first,
   InputIterator last,
@@ -432,7 +434,7 @@ _CCCL_HOST_DEVICE thrust::pair<OutputIterator1, OutputIterator2> partition_copy(
  *  \see \p partition
  */
 template <typename InputIterator, typename OutputIterator1, typename OutputIterator2, typename Predicate>
-thrust::pair<OutputIterator1, OutputIterator2> partition_copy(
+::cuda::std::pair<OutputIterator1, OutputIterator2> partition_copy(
   InputIterator first, InputIterator last, OutputIterator1 out_true, OutputIterator2 out_false, Predicate pred);
 
 /*! \p partition_copy differs from \p partition only in that the reordered
@@ -507,7 +509,7 @@ template <typename DerivedPolicy,
           typename OutputIterator1,
           typename OutputIterator2,
           typename Predicate>
-_CCCL_HOST_DEVICE thrust::pair<OutputIterator1, OutputIterator2> partition_copy(
+_CCCL_HOST_DEVICE ::cuda::std::pair<OutputIterator1, OutputIterator2> partition_copy(
   const thrust::detail::execution_policy_base<DerivedPolicy>& exec,
   InputIterator1 first,
   InputIterator1 last,
@@ -581,7 +583,7 @@ template <typename InputIterator1,
           typename OutputIterator1,
           typename OutputIterator2,
           typename Predicate>
-thrust::pair<OutputIterator1, OutputIterator2> partition_copy(
+::cuda::std::pair<OutputIterator1, OutputIterator2> partition_copy(
   InputIterator1 first,
   InputIterator1 last,
   InputIterator2 stencil,
@@ -919,7 +921,7 @@ template <typename DerivedPolicy,
           typename OutputIterator1,
           typename OutputIterator2,
           typename Predicate>
-_CCCL_HOST_DEVICE thrust::pair<OutputIterator1, OutputIterator2> stable_partition_copy(
+_CCCL_HOST_DEVICE ::cuda::std::pair<OutputIterator1, OutputIterator2> stable_partition_copy(
   const thrust::detail::execution_policy_base<DerivedPolicy>& exec,
   InputIterator first,
   InputIterator last,
@@ -993,7 +995,7 @@ _CCCL_HOST_DEVICE thrust::pair<OutputIterator1, OutputIterator2> stable_partitio
  *  \see \p stable_partition
  */
 template <typename InputIterator, typename OutputIterator1, typename OutputIterator2, typename Predicate>
-thrust::pair<OutputIterator1, OutputIterator2> stable_partition_copy(
+::cuda::std::pair<OutputIterator1, OutputIterator2> stable_partition_copy(
   InputIterator first, InputIterator last, OutputIterator1 out_true, OutputIterator2 out_false, Predicate pred);
 
 /*! \p stable_partition_copy differs from \p stable_partition only in that the reordered
@@ -1070,7 +1072,7 @@ template <typename DerivedPolicy,
           typename OutputIterator1,
           typename OutputIterator2,
           typename Predicate>
-_CCCL_HOST_DEVICE thrust::pair<OutputIterator1, OutputIterator2> stable_partition_copy(
+_CCCL_HOST_DEVICE ::cuda::std::pair<OutputIterator1, OutputIterator2> stable_partition_copy(
   const thrust::detail::execution_policy_base<DerivedPolicy>& exec,
   InputIterator1 first,
   InputIterator1 last,
@@ -1146,7 +1148,7 @@ template <typename InputIterator1,
           typename OutputIterator1,
           typename OutputIterator2,
           typename Predicate>
-thrust::pair<OutputIterator1, OutputIterator2> stable_partition_copy(
+::cuda::std::pair<OutputIterator1, OutputIterator2> stable_partition_copy(
   InputIterator1 first,
   InputIterator1 last,
   InputIterator2 stencil,
@@ -1154,10 +1156,12 @@ thrust::pair<OutputIterator1, OutputIterator2> stable_partition_copy(
   OutputIterator2 out_false,
   Predicate pred);
 
-/*! \} // end stream_compaction
+/*!
+ * \} end group partitioning
  */
 
-/*! \} // end reordering
+/*!
+ * \} end group reordering
  */
 
 /*! \addtogroup searching
@@ -1268,7 +1272,8 @@ _CCCL_HOST_DEVICE ForwardIterator partition_point(
 template <typename ForwardIterator, typename Predicate>
 ForwardIterator partition_point(ForwardIterator first, ForwardIterator last, Predicate pred);
 
-/*! \} // searching
+/*!
+ * \} end group searching
  */
 
 /*! \addtogroup reductions
@@ -1374,8 +1379,12 @@ _CCCL_HOST_DEVICE bool is_partitioned(
 template <typename InputIterator, typename Predicate>
 bool is_partitioned(InputIterator first, InputIterator last, Predicate pred);
 
-/*! \} // end predicates
- *  \} // end reductions
+/*!
+ * \} end group predicates
+ */
+
+/*!
+ * \} end group reductions
  */
 
 THRUST_NAMESPACE_END

@@ -25,15 +25,14 @@ _CCCL_SUPPRESS_DEPRECATED_PUSH
 #include <cuda/std/__memory/allocator.h>
 _CCCL_SUPPRESS_DEPRECATED_POP
 
-#include <cuda/std/__concepts/derived_from.h>
 #include <cuda/std/__execution/env.h>
 #include <cuda/std/__type_traits/enable_if.h>
-#include <cuda/std/__type_traits/integral_constant.h>
 #include <cuda/std/__type_traits/is_callable.h>
-#include <cuda/std/__type_traits/is_convertible.h>
-#include <cuda/std/__utility/rel_ops.h>
+#include <cuda/std/__utility/exchange.h>
 #include <cuda/std/__utility/unreachable.h>
 
+#include <cuda/experimental/__detail/type_traits.cuh>
+#include <cuda/experimental/__execution/completion_behavior.cuh>
 #include <cuda/experimental/__execution/domain.cuh>
 #include <cuda/experimental/__execution/fwd.cuh>
 #include <cuda/experimental/__execution/meta.cuh>
@@ -52,15 +51,15 @@ _CCCL_GLOBAL_CONSTANT struct get_allocator_t
 {
   template <class _Env>
   [[nodiscard]] _CCCL_API constexpr auto operator()(const _Env& __env) const noexcept
-    -> __query_result_or_t<_Env, get_allocator_t, _CUDA_VSTD::allocator<void>>
+    -> __query_result_or_t<_Env, get_allocator_t, ::cuda::std::allocator<void>>
   {
     static_assert(__nothrow_queryable_with_or<_Env, get_allocator_t, true>,
                   "The get_allocator query must be noexcept.");
     // NOT TO SPEC: return a default allocator if the query is not supported.
-    return __query_or(__env, *this, _CUDA_VSTD::allocator<void>{});
+    return __query_or(__env, *this, ::cuda::std::allocator<void>{});
   }
 
-  [[nodiscard]] _CCCL_TRIVIAL_API static constexpr auto query(forwarding_query_t) noexcept -> bool
+  [[nodiscard]] _CCCL_API static constexpr auto query(forwarding_query_t) noexcept -> bool
   {
     return true;
   }
@@ -79,51 +78,11 @@ _CCCL_GLOBAL_CONSTANT struct get_stop_token_t
     return __query_or(__env, *this, never_stop_token{});
   }
 
-  [[nodiscard]] _CCCL_TRIVIAL_API static constexpr auto query(forwarding_query_t) noexcept -> bool
+  [[nodiscard]] _CCCL_API static constexpr auto query(forwarding_query_t) noexcept -> bool
   {
     return true;
   }
 } get_stop_token{};
-
-template <class _Ty>
-using stop_token_of_t _CCCL_NODEBUG_ALIAS = _CUDA_VSTD::decay_t<_CUDA_VSTD::__call_result_t<get_stop_token_t, _Ty>>;
-
-//////////////////////////////////////////////////////////////////////////////////////////
-// get_completion_scheduler
-template <class _Tag>
-struct get_completion_scheduler_t
-{
-  _CCCL_EXEC_CHECK_DISABLE
-  _CCCL_TEMPLATE(class _Env)
-  _CCCL_REQUIRES(__queryable_with<_Env, get_completion_scheduler_t>)
-  [[nodiscard]] _CCCL_API constexpr auto operator()(const _Env& __env) const noexcept
-    -> __query_result_t<_Env, get_completion_scheduler_t>
-  {
-    static_assert(noexcept(__env.query(*this)));
-    static_assert(__is_scheduler<decltype(__env.query(*this))>);
-    return __env.query(*this);
-  }
-
-  [[nodiscard]] _CCCL_TRIVIAL_API static constexpr auto query(forwarding_query_t) noexcept -> bool
-  {
-    return true;
-  }
-};
-
-template <class _Tag>
-extern _CUDA_VSTD::__undefined<_Tag> get_completion_scheduler;
-
-// Explicitly instantiate these because of variable template weirdness in device code
-template <>
-_CCCL_GLOBAL_CONSTANT get_completion_scheduler_t<set_value_t> get_completion_scheduler<set_value_t>{};
-template <>
-_CCCL_GLOBAL_CONSTANT get_completion_scheduler_t<set_error_t> get_completion_scheduler<set_error_t>{};
-template <>
-_CCCL_GLOBAL_CONSTANT get_completion_scheduler_t<set_stopped_t> get_completion_scheduler<set_stopped_t>{};
-
-template <class _Env, class _Tag = set_value_t>
-using __completion_scheduler_of_t _CCCL_NODEBUG_ALIAS =
-  _CUDA_VSTD::decay_t<_CUDA_VSTD::__call_result_t<get_completion_scheduler_t<_Tag>, _Env>>;
 
 //////////////////////////////////////////////////////////////////////////////////////////
 // get_scheduler
@@ -136,18 +95,15 @@ _CCCL_GLOBAL_CONSTANT struct get_scheduler_t
     -> __query_result_t<_Env, get_scheduler_t>
   {
     static_assert(noexcept(__env.query(*this)));
-    static_assert(__is_scheduler<decltype(__env.query(*this))>);
+    static_assert(__is_scheduler<__query_result_t<_Env, get_scheduler_t>>);
     return __env.query(*this);
   }
 
-  [[nodiscard]] _CCCL_TRIVIAL_API static constexpr auto query(forwarding_query_t) noexcept -> bool
+  [[nodiscard]] _CCCL_API static constexpr auto query(forwarding_query_t) noexcept -> bool
   {
     return true;
   }
 } get_scheduler{};
-
-template <class _Env>
-using __scheduler_of_t _CCCL_NODEBUG_ALIAS = _CUDA_VSTD::decay_t<_CUDA_VSTD::__call_result_t<get_scheduler_t, _Env>>;
 
 //////////////////////////////////////////////////////////////////////////////////////////
 // get_delegation_scheduler
@@ -164,11 +120,181 @@ _CCCL_GLOBAL_CONSTANT struct get_delegation_scheduler_t
     return __env.query(*this);
   }
 
-  [[nodiscard]] _CCCL_TRIVIAL_API static constexpr auto query(forwarding_query_t) noexcept -> bool
+  [[nodiscard]] _CCCL_API static constexpr auto query(forwarding_query_t) noexcept -> bool
   {
     return true;
   }
 } get_delegation_scheduler{};
+
+//////////////////////////////////////////////////////////////////////////////////////////
+// get_completion_scheduler
+
+//! @brief A query type for asking a sender's attributes for the scheduler on which that
+//! sender will complete.
+//!
+//! @tparam _Tag one of set_value_t, set_error_t, or set_stopped_t
+template <class _Tag>
+struct get_completion_scheduler_t
+{
+  // This function object reads the completion scheduler from an attribute object or a
+  // scheduler, accounting for the fact that the query member function may or may not
+  // accept an environment.
+  struct __read_query_t
+  {
+    _CCCL_EXEC_CHECK_DISABLE
+    _CCCL_TEMPLATE(class _Attrs, class _GetComplSch = get_completion_scheduler_t)
+    _CCCL_REQUIRES(__queryable_with<_Attrs, _GetComplSch>)
+    [[nodiscard]] _CCCL_API constexpr auto operator()(const _Attrs& __attrs, cuda::std::__ignore_t = {}) const noexcept
+      -> __query_result_t<_Attrs, _GetComplSch>
+    {
+      static_assert(noexcept(__attrs.query(_GetComplSch{})));
+      static_assert(__is_scheduler<decltype(__attrs.query(_GetComplSch{}))>,
+                    "The get_completion_scheduler query must return a scheduler type.");
+      return __attrs.query(_GetComplSch{});
+    }
+
+    _CCCL_EXEC_CHECK_DISABLE
+    _CCCL_TEMPLATE(class _Attrs, class _Env, class _GetComplSch = get_completion_scheduler_t)
+    _CCCL_REQUIRES(__queryable_with<_Attrs, _GetComplSch, const _Env&>)
+    [[nodiscard]] _CCCL_API constexpr auto operator()(const _Attrs& __attrs, const _Env& __env) const noexcept
+      -> __query_result_t<_Attrs, _GetComplSch, const _Env&>
+    {
+      static_assert(noexcept(__attrs.query(_GetComplSch{}, __env)));
+      static_assert(__is_scheduler<decltype(__attrs.query(_GetComplSch{}, __env))>,
+                    "The get_completion_scheduler query must return a scheduler type.");
+      return __attrs.query(_GetComplSch{}, __env);
+    }
+  };
+
+private:
+  // A scheduler might have a completion scheduler different from itself; for example, an
+  // inline_scheduler completes wherever the scheduler's sender is started. So we
+  // recursively ask the scheduler for its completion scheduler until we find one whose
+  // completion scheduler is equal to itself (or it doesn't have one).
+  struct __recurse_query_t
+  {
+    _CCCL_EXEC_CHECK_DISABLE
+    template <class _Self = __recurse_query_t, class _Sch, class... _Env>
+    [[nodiscard]]
+    _CCCL_API constexpr auto operator()([[maybe_unused]] _Sch __sch, const _Env&... __env) const noexcept
+    {
+      // When determining where the scheduler's operations will complete, we query
+      // for the completion scheduler of the value channel:
+      using __read_query_t = typename get_completion_scheduler_t<set_value_t>::__read_query_t;
+
+      if constexpr (__callable<__read_query_t, _Sch, const _Env&...>)
+      {
+        using __sch2_t = __call_result_t<__read_query_t, _Sch, const _Env&...>;
+        if constexpr (__same_as<_Sch, __sch2_t>)
+        {
+          _Sch __prev = __sch;
+          do
+          {
+            __prev = cuda::std::exchange(__sch, __read_query_t{}(__sch, __env...));
+          } while (__prev != __sch);
+          return __sch;
+        }
+        else
+        {
+          // New scheduler has different type. Recurse!
+          return _Self{}(__read_query_t{}(__sch, __env...), __env...);
+        }
+      }
+      else
+      {
+        if constexpr (__callable<__read_query_t, env_of_t<schedule_result_t<_Sch>>, const _Env&...>)
+        {
+          _CCCL_ASSERT(__sch == __read_query_t{}(get_env(__sch.schedule()), __env...),
+                       "the scheduler's sender must have a completion scheduler attribute equal to the scheduler that "
+                       "provided it.");
+        }
+        return __sch;
+      }
+    }
+  };
+
+  template <class _Attrs, class... _Env, class _Sch>
+  [[nodiscard]] _CCCL_TRIVIAL_API constexpr static auto __check_domain(_Sch __sch) noexcept -> _Sch
+  {
+    // Sanity check: if a completion domain can be determined, then it must match the
+    // domain of the completion scheduler.
+    if constexpr (__callable<get_completion_domain_t<_Tag>, const _Attrs&, const _Env&...>)
+    {
+      using __domain_t = __call_result_t<get_completion_domain_t<_Tag>, const _Attrs&, const _Env&...>;
+      static_assert(__same_as<__domain_t, __scheduler_domain_t<_Sch, const _Env&...>>,
+                    "the sender claims to complete on a domain that is not the domain of its completion scheduler");
+    }
+    return __sch;
+  }
+
+  template <class _Attrs, class... _Env>
+  [[nodiscard]] _CCCL_API static _CCCL_CONSTEVAL auto __get_declfn() noexcept
+  {
+    // If __attrs has a completion scheduler, then return it (after checking the scheduler
+    // for _its_ completion scheduler):
+    if constexpr (__callable<__read_query_t, const _Attrs&, const _Env&...>)
+    {
+      return __declfn<decltype(__recurse_query_t{}(
+        __read_query_t{}(declval<_Attrs>(), declval<_Env>()...), declval<_Env>()...))>;
+    }
+    // Otherwise, if __attrs indicates that its sender completes inline, then we can ask
+    // the environment for the current scheduler and return that (after checking the
+    // scheduler for _its_ completion scheduler).
+    else if constexpr (__completes_inline<_Attrs, _Env...> && __callable<get_scheduler_t, const _Env&...>)
+    {
+      return __declfn<decltype(__recurse_query_t{}(
+        get_scheduler(declval<_Env>()...), __hide_scheduler{declval<_Env>()}...))>;
+    }
+    else if constexpr (__is_scheduler<_Attrs> && sizeof...(_Env) == 0)
+    {
+      return __declfn<_Attrs>;
+    }
+    // Otherwise, no completion scheduler can be determined. Return void.
+  }
+
+public:
+  template <class _Attrs, class... _Env, auto _DeclFn = __get_declfn<const _Attrs&, const _Env&...>()>
+  [[nodiscard]] _CCCL_API constexpr auto operator()(const _Attrs& __attrs, const _Env&... __env) const noexcept
+    -> __unless_one_of_t<decltype(_DeclFn()), void>
+  {
+    // If __attrs has a completion scheduler, then return it (after checking the scheduler
+    // for _its_ completion scheduler):
+    if constexpr (__callable<__read_query_t, const _Attrs&, const _Env&...>)
+    {
+      return __check_domain<_Attrs, _Env...>(__recurse_query_t{}(__read_query_t{}(__attrs, __env...), __env...));
+    }
+    // Otherwise, if __attrs indicates that its sender completes inline, then we can ask
+    // the environment for the current scheduler and return that (after checking the
+    // scheduler for _its_ completion scheduler).
+    else if constexpr (__completes_inline<_Attrs, _Env...> && __callable<get_scheduler_t, const _Env&...>)
+    {
+      return __check_domain<_Attrs, _Env...>(__recurse_query_t{}(get_scheduler(__env...), __hide_scheduler{__env}...));
+    }
+    else
+    {
+      return __attrs;
+    }
+  }
+
+  [[nodiscard]] _CCCL_API static constexpr auto query(forwarding_query_t) noexcept -> bool
+  {
+    return true;
+  }
+};
+
+template <class _Tag>
+extern ::cuda::std::__undefined<_Tag> get_completion_scheduler;
+
+// Explicitly instantiate these because of variable template weirdness in device code
+template <>
+_CCCL_GLOBAL_CONSTANT get_completion_scheduler_t<set_value_t> get_completion_scheduler<set_value_t>{};
+template <>
+_CCCL_GLOBAL_CONSTANT get_completion_scheduler_t<set_error_t> get_completion_scheduler<set_error_t>{};
+template <>
+_CCCL_GLOBAL_CONSTANT get_completion_scheduler_t<set_stopped_t> get_completion_scheduler<set_stopped_t>{};
+
+//////////////////////////////////////////////////////////////////////////////////////////
+// get_forward_progress_guarantee
 
 // This query is not a forwarding query.
 _CCCL_GLOBAL_CONSTANT struct get_forward_progress_guarantee_t
@@ -181,7 +307,7 @@ _CCCL_GLOBAL_CONSTANT struct get_forward_progress_guarantee_t
     return __query_or(__sch, *this, forward_progress_guarantee::weakly_parallel);
   }
 
-  [[nodiscard]] _CCCL_TRIVIAL_API static constexpr auto query(forwarding_query_t) noexcept -> bool
+  [[nodiscard]] _CCCL_API static constexpr auto query(forwarding_query_t) noexcept -> bool
   {
     return true;
   }
@@ -199,163 +325,27 @@ struct __single_threaded_config_t : __single_threaded_config_base_t
   {}
 };
 
+_CCCL_GLOBAL_CONSTANT __single_threaded_config_t __single_threaded_config{};
+
 //////////////////////////////////////////////////////////////////////////////////////////
 // get_launch_config: A sender can define this attribute to control the launch configuration
 // of the kernel it will launch when executed on a CUDA stream scheduler.
 _CCCL_GLOBAL_CONSTANT struct get_launch_config_t
 {
   template <class _Env>
-  [[nodiscard]] _CCCL_HOST_API constexpr auto operator()(const _Env& __env) const noexcept
+  [[nodiscard]] _CCCL_API constexpr auto operator()(const _Env& __env) const noexcept
     -> __query_result_or_t<_Env, get_launch_config_t, __single_threaded_config_t>
   {
     static_assert(__nothrow_queryable_with_or<_Env, get_launch_config_t, true>,
                   "The get_launch_config query must be noexcept.");
-    return __query_or(__env, *this, __single_threaded_config_t{});
+    return __query_or(__env, *this, __single_threaded_config);
   }
 
-  [[nodiscard]] _CCCL_TRIVIAL_API static constexpr auto query(forwarding_query_t) noexcept -> bool
+  [[nodiscard]] _CCCL_API static constexpr auto query(forwarding_query_t) noexcept -> bool
   {
     return true;
   }
 } get_launch_config{};
-
-namespace __completion_behavior
-{
-enum class _CCCL_TYPE_VISIBILITY_DEFAULT completion_behavior : int
-{
-  unknown, ///< The completion behavior is unknown.
-  asynchronous, ///< The operation's completion will not happen on the calling thread before `start()`
-                ///< returns.
-  synchronous, ///< The operation's completion happens-before the return of `start()`.
-  inline_completion ///< The operation completes synchronously within `start()` on the same thread that called
-                    ///< `start()`.
-};
-
-#if _LIBCUDACXX_HAS_SPACESHIP_OPERATOR()
-[[nodiscard]] _CCCL_API constexpr auto operator<=>(completion_behavior a, completion_behavior b) noexcept
-  -> _CUDA_VSTD::strong_ordering
-{
-  return static_cast<int>(a) <=> static_cast<int>(b);
-}
-#else
-[[nodiscard]] _CCCL_API constexpr auto operator<(completion_behavior a, completion_behavior b) noexcept -> bool
-{
-  return static_cast<int>(a) < static_cast<int>(b);
-}
-[[nodiscard]] _CCCL_API constexpr auto operator==(completion_behavior a, completion_behavior b) noexcept -> bool
-{
-  return static_cast<int>(a) == static_cast<int>(b);
-}
-using namespace _CUDA_VSTD::rel_ops;
-#endif
-} // namespace __completion_behavior
-
-struct _CCCL_TYPE_VISIBILITY_DEFAULT min_t;
-
-struct completion_behavior
-{
-private:
-  template <__completion_behavior::completion_behavior _CB>
-  using __constant_t = _CUDA_VSTD::integral_constant<__completion_behavior::completion_behavior, _CB>;
-
-  struct _CCCL_TYPE_VISIBILITY_DEFAULT unknown_t //
-      : __constant_t<__completion_behavior::completion_behavior::unknown>
-  {};
-  struct _CCCL_TYPE_VISIBILITY_DEFAULT asynchronous_t //
-      : __constant_t<__completion_behavior::completion_behavior::asynchronous>
-  {};
-  struct _CCCL_TYPE_VISIBILITY_DEFAULT synchronous_t //
-      : __constant_t<__completion_behavior::completion_behavior::synchronous>
-  {};
-  struct _CCCL_TYPE_VISIBILITY_DEFAULT inline_completion_t //
-      : __constant_t<__completion_behavior::completion_behavior::inline_completion>
-  {};
-
-  friend struct min_t;
-
-public:
-  static constexpr unknown_t unknown{};
-  static constexpr asynchronous_t asynchronous{};
-  static constexpr synchronous_t synchronous{};
-  static constexpr inline_completion_t inline_completion{};
-};
-
-//////////////////////////////////////////////////////////////////////////////////////////
-// get_completion_behavior: A sender can define this attribute to describe the sender's
-// completion behavior
-struct get_completion_behavior_t
-{
-  [[nodiscard]] _CCCL_API constexpr auto operator()(_CUDA_VSTD::__ignore_t, _CUDA_VSTD::__ignore_t = {}) const noexcept
-  {
-    return completion_behavior::unknown;
-  }
-
-  _CCCL_TEMPLATE(class _Attrs)
-  _CCCL_REQUIRES(__queryable_with<_Attrs, get_completion_behavior_t>)
-  [[nodiscard]] _CCCL_API constexpr auto operator()(const _Attrs& __attrs, _CUDA_VSTD::__ignore_t = {}) const noexcept
-  {
-    static_assert(__nothrow_queryable_with<_Attrs, get_completion_behavior_t>,
-                  "The get_completion_behavior query must be noexcept.");
-    static_assert(_CUDA_VSTD::is_convertible_v<__query_result_t<_Attrs, get_completion_behavior_t>,
-                                               __completion_behavior::completion_behavior>,
-                  "The get_completion_behavior query must return one of the static member variables in "
-                  "execution::completion_behavior.");
-    return __attrs.query(*this);
-  }
-
-  _CCCL_TEMPLATE(class _Attrs, class _Env)
-  _CCCL_REQUIRES(__queryable_with<_Attrs, get_completion_behavior_t, const _Env&>)
-  [[nodiscard]] _CCCL_API constexpr auto operator()(const _Attrs& __attrs, const _Env& __env) const noexcept
-  {
-    static_assert(__nothrow_queryable_with<_Attrs, get_completion_behavior_t, const _Env&>,
-                  "The get_completion_behavior query must be noexcept.");
-    static_assert(_CUDA_VSTD::is_convertible_v<__query_result_t<_Attrs, get_completion_behavior_t, const _Env&>,
-                                               __completion_behavior::completion_behavior>,
-                  "The get_completion_behavior query must return one of the static member variables in "
-                  "execution::completion_behavior.");
-    return __attrs.query(*this, __env);
-  }
-
-  [[nodiscard]] _CCCL_TRIVIAL_API static constexpr auto query(forwarding_query_t) noexcept -> bool
-  {
-    return true;
-  }
-};
-
-struct _CCCL_TYPE_VISIBILITY_DEFAULT min_t
-{
-  template <__completion_behavior::completion_behavior... _CBs>
-  [[nodiscard]] _CCCL_API constexpr auto operator()(completion_behavior::__constant_t<_CBs>...) const noexcept
-  {
-    constexpr auto __behavior = _CUDA_VSTD::min({_CBs...});
-    if constexpr (__behavior == completion_behavior::unknown)
-    {
-      return completion_behavior::unknown;
-    }
-    else if constexpr (__behavior == completion_behavior::asynchronous)
-    {
-      return completion_behavior::asynchronous;
-    }
-    else if constexpr (__behavior == completion_behavior::synchronous)
-    {
-      return completion_behavior::synchronous;
-    }
-    else if constexpr (__behavior == completion_behavior::inline_completion)
-    {
-      return completion_behavior::inline_completion;
-    }
-    _CCCL_UNREACHABLE();
-  }
-};
-
-_CCCL_GLOBAL_CONSTANT min_t min{};
-
-template <class _Sndr, class... _Env>
-[[nodiscard]] _CCCL_API constexpr auto get_completion_behavior() noexcept
-{
-  return _CUDA_VSTD::__call_result_t<get_completion_behavior_t, env_of_t<_Sndr>, _Env...>{};
-}
-
 } // namespace cuda::experimental::execution
 
 #include <cuda/experimental/__execution/epilogue.cuh>

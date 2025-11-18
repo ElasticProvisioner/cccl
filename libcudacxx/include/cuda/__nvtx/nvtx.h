@@ -30,10 +30,10 @@
 // Enable the functionality of this header if:
 // * The NVTX3 C API is available in CTK
 // * NVTX is not explicitly disabled (via CCCL_DISABLE_NVTX or NVTX_DISABLE)
-// * the compiler is not nvc++ (NVTX3 uses module as an identifier, which trips up NVHPC)
+// * the compiler is not nvc++ (NVTX3 uses module as an identifier, which trips up NVHPC, fixed in CTK >= 13.0)
 // * the compiler is not NVRTC
 #if _CCCL_HAS_INCLUDE(<nvtx3/nvToolsExt.h>) && !defined(CCCL_DISABLE_NVTX) && !defined(NVTX_DISABLE) \
-                      && (!_CCCL_COMPILER(NVHPC))                                                    \
+                      && (!_CCCL_COMPILER(NVHPC) || _CCCL_CTK_AT_LEAST(13, 0))                       \
                       && !_CCCL_COMPILER(NVRTC)
 
 // Since NVTX 3.2, the NVTX headers can declare themselves as system headers by declaring the following macro:
@@ -100,7 +100,7 @@ _CCCL_END_NAMESPACE_CUDA
 // into a dispatch region running only on the host, while preserving the semantic scope where the range is declared.
 #  define _CCCL_NVTX_RANGE_SCOPE_IF(condition, name)                                                               \
     _CCCL_BEFORE_NVTX_RANGE_SCOPE(name)                                                                            \
-    _CUDA_VSTD::optional<::nvtx3::v1::scoped_range_in<::cuda::detail::NVTXCCCLDomain>> __cuda_nvtx3_range;         \
+    ::cuda::std::optional<::nvtx3::v1::scoped_range_in<::cuda::detail::NVTXCCCLDomain>> __cuda_nvtx3_range;        \
     NV_IF_TARGET(                                                                                                  \
       NV_IS_HOST,                                                                                                  \
       static const ::nvtx3::v1::registered_string_in<::cuda::detail::NVTXCCCLDomain> __cuda_nvtx3_func_name{name}; \

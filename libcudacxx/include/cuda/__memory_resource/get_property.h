@@ -8,8 +8,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _CUDA__MEMORY_RESOURCE_GET_PROPERTY_H
-#define _CUDA__MEMORY_RESOURCE_GET_PROPERTY_H
+#ifndef _CUDA___MEMORY_RESOURCE_GET_PROPERTY_H
+#define _CUDA___MEMORY_RESOURCE_GET_PROPERTY_H
 
 #include <cuda/std/detail/__config>
 
@@ -90,10 +90,10 @@ _CCCL_CONCEPT property_with_value = _CCCL_REQUIRES_EXPR((_Property))(typename(__
 //!
 //! @endrst
 template <class _Resource, class _Property, class _Return>
-_CCCL_CONCEPT_FRAGMENT(
-  __has_property_with_,
-  requires(const _Resource& __res)(requires(property_with_value<_Property>),
-                                   requires(_CUDA_VSTD::same_as<_Return, decltype(get_property(__res, _Property{}))>)));
+_CCCL_CONCEPT_FRAGMENT(__has_property_with_,
+                       requires(const _Resource& __res)(
+                         requires(property_with_value<_Property>),
+                         requires(::cuda::std::same_as<_Return, decltype(get_property(__res, _Property{}))>)));
 template <class _Resource, class _Property, class _Return>
 _CCCL_CONCEPT has_property_with = _CCCL_FRAGMENT(__has_property_with_, _Resource, _Property, _Return);
 
@@ -101,7 +101,7 @@ template <class _Resource, class _Upstream>
 _CCCL_CONCEPT_FRAGMENT(
   __has_upstream_resource_,
   requires(const _Resource& __res)(
-    requires(_CUDA_VSTD::same_as<_CUDA_VSTD::__remove_const_ref_t<decltype(__res.upstream_resource())>, _Upstream>)));
+    requires(::cuda::std::same_as<::cuda::std::__remove_const_ref_t<decltype(__res.upstream_resource())>, _Upstream>)));
 template <class _Resource, class _Upstream>
 _CCCL_CONCEPT __has_upstream_resource = _CCCL_FRAGMENT(__has_upstream_resource_, _Resource, _Upstream);
 
@@ -150,4 +150,4 @@ _CCCL_END_NAMESPACE_CUDA
 
 #include <cuda/std/__cccl/epilogue.h>
 
-#endif //_CUDA__MEMORY_RESOURCE_GET_PROPERTY_H
+#endif //_CUDA___MEMORY_RESOURCE_GET_PROPERTY_H

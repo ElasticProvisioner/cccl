@@ -1,4 +1,3 @@
-
 /*
  *  Copyright 2008-2013 NVIDIA Corporation
  *
@@ -33,7 +32,10 @@
 #include <thrust/iterator/detail/device_system_tag.h>
 #include <thrust/iterator/detail/minimum_system.h>
 
-#include <cuda/std/type_traits>
+#include <cuda/std/__type_traits/enable_if.h>
+#include <cuda/std/__type_traits/is_same.h>
+#include <cuda/std/__type_traits/void_t.h>
+#include <cuda/std/__utility/declval.h>
 
 THRUST_NAMESPACE_BEGIN
 
@@ -67,11 +69,19 @@ select_system(thrust::execution_policy<System1>& system1, thrust::execution_poli
   {
     return thrust::detail::derived_cast(system1);
   }
-  else
+  else if constexpr (::cuda::std::is_same_v<System2, min_sys>)
   {
-    static_assert(::cuda::std::is_same_v<System2, min_sys>);
     return thrust::detail::derived_cast(system2);
   }
+  else if constexpr (thrust::detail::is_unrelated_systems<min_sys>)
+  {
+    static_assert(!sizeof(System1), "Cannot select a system: System1 and System2 are unrelated");
+  }
+  else
+  {
+    static_assert(!sizeof(System1), "select_system failed. Please file a bug report!");
+  }
+  _CCCL_UNREACHABLE();
 }
 
 template <typename System1,
@@ -91,6 +101,5 @@ inline _CCCL_HOST_DEVICE thrust::device_system_tag select_system(thrust::any_sys
 {
   return thrust::device_system_tag();
 }
-
 } // namespace system::detail::generic
 THRUST_NAMESPACE_END

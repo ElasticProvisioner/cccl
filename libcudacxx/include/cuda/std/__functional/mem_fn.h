@@ -8,8 +8,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCUDACXX___FUNCTIONAL_MEM_FN_H
-#define _LIBCUDACXX___FUNCTIONAL_MEM_FN_H
+#ifndef _CUDA_STD___FUNCTIONAL_MEM_FN_H
+#define _CUDA_STD___FUNCTIONAL_MEM_FN_H
 
 #include <cuda/std/detail/__config>
 
@@ -47,10 +47,9 @@ public:
 
   // invoke
   template <class... _ArgTypes>
-  _CCCL_API inline _CCCL_CONSTEXPR_CXX20 typename __invoke_return<type, _ArgTypes...>::type
-  operator()(_ArgTypes&&... __args) const
+  _CCCL_API inline _CCCL_CONSTEXPR_CXX20 invoke_result_t<type, _ArgTypes...> operator()(_ArgTypes&&... __args) const
   {
-    return _CUDA_VSTD::__invoke(__f_, _CUDA_VSTD::forward<_ArgTypes>(__args)...);
+    return ::cuda::std::__invoke(__f_, ::cuda::std::forward<_ArgTypes>(__args)...);
   }
 };
 
@@ -64,4 +63,4 @@ _CCCL_END_NAMESPACE_CUDA_STD
 
 #include <cuda/std/__cccl/epilogue.h>
 
-#endif // _LIBCUDACXX___FUNCTIONAL_MEM_FN_H
+#endif // _CUDA_STD___FUNCTIONAL_MEM_FN_H
