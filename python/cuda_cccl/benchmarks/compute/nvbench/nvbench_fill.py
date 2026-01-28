@@ -75,6 +75,6 @@ if __name__ == "__main__":
 
     # Match C++ axis:
     b.add_string_axis("T", list(TYPE_MAP.keys()))
-    b.add_int64_power_of_two_axis("Elements", range(16, 36, 4)])
+    b.add_int64_power_of_two_axis("Elements", range(16, 36, 4),])
 
     bench.run_all_benchmarks(sys.argv)
