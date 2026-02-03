@@ -3,18 +3,18 @@
 CCCL configuration macros
 =========================
 
-The CUDA Core Compute Libraries provide set of macros to enable or disable specific features. These macros must be defined before any CCCL source file is included. The recommended way is to define them as the predefined compiler macros, for example:
+The CUDA Core Compute Libraries provide a set of macros to enable or disable specific features. These macros must be defined before any CCCL source file is included. The recommended way is to define them as the predefined compiler macros, for example:
 
 .. code-block:: bash
     nvcc -DCCCL_DISABLE_SOME_FEATURE src.cu
 
 .. important::
-    These macros should be defined consistently in the whole project. Defining them only in a single module or compilation phase may lead to unexpected compile time and runtime behaviour.
+    These macros should be defined consistently in the whole project. Defining them only for some translation units may lead to unexpected compile time and runtime behaviour.
 
 Assertion Control Macros
 ------------------------
 +---------------------------------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------+
-| CCCL_ENABLE_ASSERTIONS                            | Enables assertions in both host and device code, independent of debug mode.                                                                            |
+| CCCL_ENABLE_ASSERTIONS                            | Enables assertions in both host and device code, independently of debug mode.                                                                            |
 +---------------------------------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------+
 | CCCL_ENABLE_DEVICE_ASSERTIONS                     | Enables assertions in device code, independent of debug mode.                                                                                          |
 +---------------------------------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------+
@@ -24,9 +24,9 @@ Assertion Control Macros
 C++ Feature Control Macros
 --------------------------
 +---------------------------------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------+
-| CCCL_DISABLE_EXCEPTIONS                           | Disables throwing exceptions. Each ``throw`` is replaced by a ``cuda::std::terminate()`` call.                                                         |
+| CCCL_DISABLE_EXCEPTIONS                           | Disables throwing exceptions. Each ``throw`` is replaced by a call to ``cuda::std::terminate()``.                                                         |
 +---------------------------------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------+
-| CCCL_DISABLE_RTTI                                 | Disables use of for runtime type information.                                                                                                          |
+| CCCL_DISABLE_RTTI                                 | Disables use of runtime type information.                                                                                                          |
 +---------------------------------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------+
 | CCCL_IGNORE_MSVC_TRADITIONAL_PREPROCESSOR_WARNING | Disables diagnostics emitted when using MSVC's traditional preprocessor.                                                                               |
 +---------------------------------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------+
@@ -38,7 +38,7 @@ CUDA Feature Control Macros
 +---------------------------------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------+
 | CCCL_DISABLE_CDP                                  | Disables use of CUDA Dynamic Parallelism.                                                                                                              |
 +---------------------------------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------+
-| CCCL_DISABLE_CTK_COMPATIBILITY_CHECK              | Disables the check whether NVCC version matches the CUDA Toolkit version.                                                                              |
+| CCCL_DISABLE_CTK_COMPATIBILITY_CHECK              | Disables the check whether NVCC's version matches the CUDA Toolkit version.                                                                              |
 +---------------------------------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------+
 | CCCL_DISABLE_DEVICE_RUNTIME                       | Disables use of CUDA device runtime APIs (``<cuda_device_runtime.h>``), thus makes some APIs that are ``__host__ __device__`` to be ``__host__`` only. |
 +---------------------------------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------+
@@ -88,7 +88,7 @@ Type Support
 +---------------------------------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------+
 | CCCL_ENABLE_EXPERIMENTAL_HOST_ATOMICS_128B        | Enables experimental support for 128b atomics in host code.                                                                                            |
 +---------------------------------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------+
-| CCCL_GCC_HAS_EXTENDED_NUMERIC_LITERALS            | Informs that ``-fext-numeric-literals`` were enabled with GCC. This is necessary to enable ``__float128`` support.                                     |
+| CCCL_GCC_HAS_EXTENDED_NUMERIC_LITERALS            | Must be enabled in addition to passing ``-fext-numeric-literals`` with GCC to enable ``__float128`` support.                                     |
 +---------------------------------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------+
 
 .. note::
