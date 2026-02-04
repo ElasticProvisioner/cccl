@@ -3,8 +3,8 @@ channels:
   - nvidia
   - conda-forge
 dependencies:
-  - cuda-toolkit <13
-  - cupy
+  - python >=3.12,<3.14
+  - cuda-toolkit >=12,<13
 
   - gcc >=14,<15
   - gxx >=14,<15
@@ -16,7 +16,11 @@ dependencies:
   - ninja
   - fmt
 
-  # analysis
-  - jsondiff
-  - tabulate
-  - colorama
+  - pip
+  - pip:
+    - cuda-bench[cu12]>=0.2.0
+    - cuda-cccl[cu12]
+    - cupy-cuda12x
+    - jsondiff
+    - tabulate
+    - colorama

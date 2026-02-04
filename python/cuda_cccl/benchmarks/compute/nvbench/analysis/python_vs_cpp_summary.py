@@ -1,8 +1,18 @@
 #!/usr/bin/env python
-
 """
-Compare Python cuda.compute vs C++ CCCL performance.
-Shows overhead and percentage differences.
+Compare Python cuda.compute vs C++ CCCL benchmark performance.
+
+Usage:
+    # Compare by benchmark name (looks in results/ directory)
+    python python_vs_cpp_summary.py -b fill
+    python python_vs_cpp_summary.py -b fill -d 0
+    python python_vs_cpp_summary.py -b fill -d 0 -o results/fill_comparison.txt
+
+    # Compare all supported benchmarks
+    python python_vs_cpp_summary.py
+
+    # Legacy: Compare specific files
+    python python_vs_cpp_summary.py results/fill_py.json results/fill_cpp.json
 """
 
 import argparse
@@ -10,8 +20,27 @@ import math
 import sys
 from pathlib import Path
 
-import tabulate
+try:
+    import tabulate
+except ImportError:
+    print("Error: tabulate not installed. Run: pip install tabulate")
+    sys.exit(1)
+
 import utils
+
+# Supported benchmarks (must match run_benchmarks.sh)
+SUPPORTED_BENCHMARKS = [
+    "fill",
+    # Add more as implemented:
+    # "babelstream",
+    # "reduce_sum",
+    # "scan_exclusive_sum",
+    # "histogram_even",
+    # "select_if",
+    # "radix_sort_keys",
+    # "segmented_reduce_sum",
+    # "unique_by_key",
+]
 
 
 def extract_measurements(results):
@@ -81,104 +110,6 @@ def format_duration(seconds):
 def format_percentage(value):
     """Format percentage value."""
     return "%0.2f%%" % (value * 100.0)
-
-
-def main():
-    parser = argparse.ArgumentParser(
-        description="Compare Python vs C++ CCCL benchmark results"
-    )
-    parser.add_argument("python_json", help="Python benchmark results (JSON)")
-    parser.add_argument("cpp_json", help="C++ benchmark results (JSON)")
-    parser.add_argument(
-        "--device",
-        type=int,
-        help="Only compare specific device ID (default: all devices)",
-    )
-    args = parser.parse_args()
-
-    py_path = Path(args.python_json)
-    cpp_path = Path(args.cpp_json)
-
-    if not py_path.exists():
-        print(f"Error: Python results not found: {py_path}")
-        sys.exit(1)
-    if not cpp_path.exists():
-        print(f"Error: C++ results not found: {cpp_path}")
-        sys.exit(1)
-
-    py_results = utils.read_file(py_path)
-    cpp_results = utils.read_file(cpp_path)
-
-    py_measurements = extract_measurements(py_results)
-    cpp_measurements = extract_measurements(cpp_results)
-
-    # Filter by device if requested
-    if args.device is not None:
-        py_measurements = [m for m in py_measurements if m["device"] == args.device]
-        cpp_measurements = [m for m in cpp_measurements if m["device"] == args.device]
-
-    if not py_measurements or not cpp_measurements:
-        print("No matching measurements found!")
-        sys.exit(1)
-
-    # Get benchmark name
-    bench_name = py_results.get("benchmarks", [{}])[0].get("name", "unknown")
-
-    print(f"# {bench_name}\n")
-    print("GPU Time: Mean GPU execution time (cold start, pure kernel)")
-    print("  CUDA events (nvbench tag: nv/cold/time/gpu/mean)")
-    print("CPU Time: Mean CPU (host) latency")
-    print("  Host clock (nvbench tag: nv/cold/time/cpu/mean)")
-    print()
-
-    # Get unique devices
-    py_devices = sorted(set(m["device"] for m in py_measurements))
-    cpp_devices = sorted(set(m["device"] for m in cpp_measurements))
-
-    for device_id in py_devices:
-        if device_id not in cpp_devices:
-            continue
-
-        # Get device info
-        py_device = utils.find_device_by_id(device_id, py_results.get("devices", []))
-        device_name = py_device["name"] if py_device else f"Device {device_id}"
-
-        print(f"## [{device_id}] {device_name}\n")
-
-        # Filter measurements for this device
-        py_device_measurements = [
-            m for m in py_measurements if m["device"] == device_id
-        ]
-        cpp_device_measurements = [
-            m for m in cpp_measurements if m["device"] == device_id
-        ]
-
-        # Get unique types (if present)
-        types = sorted(set(m["axes"].get("T", "") for m in py_device_measurements))
-        has_types = any(types)
-
-        # Group by type (if multi-type benchmark) or just element size
-        if has_types and len(types) > 1:
-            # Multi-type benchmark: show separate table per type
-            for type_str in types:
-                if not type_str:
-                    continue
-
-                print(f"### Type: {type_str}\n")
-
-                py_type_measurements = [
-                    m for m in py_device_measurements if m["axes"].get("T") == type_str
-                ]
-                cpp_type_measurements = [
-                    m for m in cpp_device_measurements if m["axes"].get("T") == type_str
-                ]
-
-                _print_comparison_table(py_type_measurements, cpp_type_measurements)
-                print()
-        else:
-            # Single-type or no type axis: show one table
-            _print_comparison_table(py_device_measurements, cpp_device_measurements)
-            print()
 
 
 def _print_comparison_table(py_measurements, cpp_measurements):
@@ -272,6 +203,216 @@ def _print_comparison_table(py_measurements, cpp_measurements):
 
     # Print table using tabulate
     print(tabulate.tabulate(table_data, headers=headers, tablefmt="github"))
+
+
+def compare_benchmark(py_path, cpp_path, device=None, output_file=None):
+    """Compare Python vs C++ benchmark results."""
+    if not py_path.exists():
+        print(f"Error: Python results not found: {py_path}")
+        return False
+    if not cpp_path.exists():
+        print(f"Error: C++ results not found: {cpp_path}")
+        return False
+
+    py_results = utils.read_file(py_path)
+    cpp_results = utils.read_file(cpp_path)
+
+    py_measurements = extract_measurements(py_results)
+    cpp_measurements = extract_measurements(cpp_results)
+
+    # Filter by device if requested
+    if device is not None:
+        py_measurements = [m for m in py_measurements if m["device"] == device]
+        cpp_measurements = [m for m in cpp_measurements if m["device"] == device]
+
+    if not py_measurements or not cpp_measurements:
+        print("No matching measurements found!")
+        return False
+
+    # Capture output if writing to file
+    output_lines = []
+
+    def output(line=""):
+        print(line)
+        output_lines.append(line)
+
+    # Get benchmark name
+    bench_name = py_results.get("benchmarks", [{}])[0].get("name", "unknown")
+
+    output(f"# {bench_name}")
+    output()
+    output("GPU Time: Mean GPU execution time (cold start, pure kernel)")
+    output("  CUDA events (nvbench tag: nv/cold/time/gpu/mean)")
+    output("CPU Time: Mean CPU (host) latency")
+    output("  Host clock (nvbench tag: nv/cold/time/cpu/mean)")
+    output()
+
+    # Get unique devices
+    py_devices = sorted(set(m["device"] for m in py_measurements))
+    cpp_devices = sorted(set(m["device"] for m in cpp_measurements))
+
+    for device_id in py_devices:
+        if device_id not in cpp_devices:
+            continue
+
+        # Get device info
+        py_device = utils.find_device_by_id(device_id, py_results.get("devices", []))
+        device_name = py_device["name"] if py_device else f"Device {device_id}"
+
+        output(f"## [{device_id}] {device_name}")
+        output()
+
+        # Filter measurements for this device
+        py_device_measurements = [
+            m for m in py_measurements if m["device"] == device_id
+        ]
+        cpp_device_measurements = [
+            m for m in cpp_measurements if m["device"] == device_id
+        ]
+
+        # Get unique types (if present)
+        types = sorted(set(m["axes"].get("T", "") for m in py_device_measurements))
+        has_types = any(types)
+
+        # Group by type (if multi-type benchmark) or just element size
+        if has_types and len(types) > 1:
+            # Multi-type benchmark: show separate table per type
+            for type_str in types:
+                if not type_str:
+                    continue
+
+                output(f"### Type: {type_str}")
+                output()
+
+                py_type_measurements = [
+                    m for m in py_device_measurements if m["axes"].get("T") == type_str
+                ]
+                cpp_type_measurements = [
+                    m for m in cpp_device_measurements if m["axes"].get("T") == type_str
+                ]
+
+                _print_comparison_table(py_type_measurements, cpp_type_measurements)
+                output()
+        else:
+            # Single-type or no type axis: show one table
+            _print_comparison_table(py_device_measurements, cpp_device_measurements)
+            output()
+
+    # Write to file if requested
+    if output_file:
+        output_file.parent.mkdir(parents=True, exist_ok=True)
+        output_file.write_text("\n".join(output_lines))
+        print(f"\nComparison saved to: {output_file}")
+
+    return True
+
+
+def main():
+    parser = argparse.ArgumentParser(
+        description="Compare Python vs C++ CCCL benchmark results",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+  # Compare by benchmark name
+  %(prog)s -b fill
+  %(prog)s -b fill -d 0
+  %(prog)s -b fill -d 0 -o results/fill_comparison.txt
+
+  # Compare all supported benchmarks
+  %(prog)s
+
+  # Legacy: Compare specific files
+  %(prog)s results/fill_py.json results/fill_cpp.json --device 0
+
+Supported benchmarks: %(benchmarks)s
+"""
+        % {
+            "prog": "python_vs_cpp_summary.py",
+            "benchmarks": ", ".join(SUPPORTED_BENCHMARKS),
+        },
+    )
+
+    # New interface: benchmark name
+    parser.add_argument(
+        "-b",
+        "--benchmark",
+        help="Benchmark name (e.g., fill). If not specified, compares all supported benchmarks.",
+    )
+    parser.add_argument(
+        "-d", "--device", type=int, help="Filter by GPU device ID (default: all)"
+    )
+    parser.add_argument("-o", "--output", type=Path, help="Save comparison to file")
+    parser.add_argument(
+        "--results-dir",
+        type=Path,
+        default=Path(__file__).parent.parent / "results",
+        help="Results directory (default: ../results)",
+    )
+
+    # Legacy interface: positional args for file paths
+    parser.add_argument(
+        "python_json", nargs="?", help="Python benchmark results JSON (legacy)"
+    )
+    parser.add_argument(
+        "cpp_json", nargs="?", help="C++ benchmark results JSON (legacy)"
+    )
+
+    args = parser.parse_args()
+
+    # Determine mode: legacy (positional args) or new (-b flag)
+    if args.python_json and args.cpp_json:
+        # Legacy mode: explicit file paths
+        py_path = Path(args.python_json)
+        cpp_path = Path(args.cpp_json)
+        compare_benchmark(py_path, cpp_path, args.device, args.output)
+
+    elif args.benchmark:
+        # New mode: single benchmark by name
+        if args.benchmark not in SUPPORTED_BENCHMARKS:
+            print(
+                f"Error: Unknown benchmark '{args.benchmark}'. "
+                f"Supported: {', '.join(SUPPORTED_BENCHMARKS)}"
+            )
+            sys.exit(1)
+
+        py_path = args.results_dir / f"{args.benchmark}_py.json"
+        cpp_path = args.results_dir / f"{args.benchmark}_cpp.json"
+        output_path = (
+            args.output or args.results_dir / f"{args.benchmark}_comparison.txt"
+        )
+
+        if not compare_benchmark(py_path, cpp_path, args.device, output_path):
+            sys.exit(1)
+
+    else:
+        # Default: compare all supported benchmarks
+        print("Comparing all supported benchmarks...\n")
+        any_success = False
+
+        for bench in SUPPORTED_BENCHMARKS:
+            py_path = args.results_dir / f"{bench}_py.json"
+            cpp_path = args.results_dir / f"{bench}_cpp.json"
+
+            if not py_path.exists() or not cpp_path.exists():
+                print(f"Skipping {bench}: results not found")
+                print(f"  Run: ./run_benchmarks.sh -b {bench}")
+                print()
+                continue
+
+            output_path = args.results_dir / f"{bench}_comparison.txt"
+            print(f"=" * 72)
+            print(f"Benchmark: {bench}")
+            print(f"=" * 72)
+            print()
+
+            if compare_benchmark(py_path, cpp_path, args.device, output_path):
+                any_success = True
+            print()
+
+        if not any_success:
+            print("No benchmark results found. Run benchmarks first:")
+            print("  ./run_benchmarks.sh -b fill")
+            sys.exit(1)
 
 
 if __name__ == "__main__":

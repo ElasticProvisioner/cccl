@@ -1,5 +1,7 @@
 # cuda.compute Benchmarks
 
+Compare Python `cuda.compute` performance against C++ CUB implementations.
+
 ## Setup
 
 ```bash
@@ -7,70 +9,100 @@ conda env create -f environment.yml
 conda activate cuda-compute-bench
 ```
 
-Then install nvbench (from source at the moment):
-
-```bash
-cd nvbench/python
-rm -rf build  # cleanup just in case
-pip install -e .
-```
-
-Install cuda-compute, for example:
+Install `cuda.compute`:
 
 ```bash
 conda install -c conda-forge cccl-python
 ```
 
-### Build C++ Benchmarks
+## Build C++ Benchmarks
+
+Build CUB benchmarks using the CI script (one-time, ~13 minutes):
 
 ```bash
-mkdir -p build && cd build
-
-# Auto-detect GPU (requires GPU present at build time)
-cmake .. -DCMAKE_CUDA_ARCHITECTURES=native
-# Or specify architecture
-cmake .. -DCMAKE_CUDA_ARCHITECTURES=80  # Ampere (A100)
-# cmake .. -DCMAKE_CUDA_ARCHITECTURES=90  # Hopper (H100)
-
-# Build
-cmake --build . -j
+cd /path/to/cccl
+./ci/build_cub.sh -arch 89  # Use your GPU arch (89=RTX 4090, 80=A100, 90=H100)
 ```
 
-Binaries will be output to: `./bin`
+Binaries are built to: `build/cub/bin/`
 
-
-## Usage
-
-Run a single Python benchmark:
+## Run Benchmarks
 
 ```bash
-# List available benchmarks
-python nvbench_transform.py --list
+# Run both C++ and Python (default)
+./run_benchmarks.sh -b fill -d 0
 
-# Run a single benchmark, output to stdout
-python nvbench_transform.py --benchmark bench_unary_transform_pointer
+# Run only C++
+./run_benchmarks.sh -b fill --cpp
 
-# Save a JSON output
-mkdir -p results
-python nvbench_transform.py --benchmark bench_unary_transform_pointer --json results/bench_transform_py.json
+# Run only Python
+./run_benchmarks.sh -b fill --py
+
+# Show help
+./run_benchmarks.sh --help
 ```
 
-Run a single C++ benchmark:
+## Compare Results
 
 ```bash
-# List available benchmarks
-./bin/nvbench_transform_cpp --list
-
-# Run a single benchmark, output to stdout
-./bin/nvbench_transform_cpp --benchmark bench_unary_transform_pointer
-
-# Save a JSON output
-mkdir -p results
-./bin/nvbench_transform_cpp --benchmark bench_unary_transform_pointer --json results/bench_transform_cpp.json
+./compare_results.sh -b fill -d 0
 ```
 
-Compare results:
+## Makefile Shortcuts
 
+```bash
+make run                    # Run both C++ and Python
+make run-cpp                # Run C++ only
+make run-py                 # Run Python only
+make compare                # Compare results
+
+# With parameters
+make run BENCHMARK=fill DEVICE=0
 ```
-python analysis/python_vs_cpp_summary.py results/bench_transform_py.json results/bench_transform_cpp.json
+
+## Output Files
+
+- `results/fill_cpp.json` - C++ benchmark results
+- `results/fill_py.json` - Python benchmark results
+- `results/fill_comparison.txt` - Comparison report
+
+## Supported Benchmarks
+
+| Benchmark | CUB Source | Python Script |
+|-----------|------------|---------------|
+| `fill` | `cub/benchmarks/bench/transform/fill.cu` | `nvbench_fill.py` |
+
+See `CUB_TO_PYTHON_API_MAPPING.md` for full list of 37 implementable benchmarks.
+
+## Manual Usage
+
+### List benchmark configurations
+
+```bash
+# Python
+python nvbench_fill.py --list
+
+# C++
+/path/to/cccl/build/cub/bin/cub.bench.transform.fill.base --list
+```
+
+### Run with custom options
+
+```bash
+# Python - specific type and size
+python nvbench_fill.py --axis "T=I32" --axis "Elements=20" --devices 0
+
+# C++ - save JSON
+/path/to/cccl/build/cub/bin/cub.bench.transform.fill.base \
+  --json results/fill_cpp.json \
+  --devices 0
+```
+
+### Compare manually
+
+```bash
+python analysis/python_vs_cpp_summary.py \
+  results/fill_py.json \
+  results/fill_cpp.json \
+  --device 0
 ```
