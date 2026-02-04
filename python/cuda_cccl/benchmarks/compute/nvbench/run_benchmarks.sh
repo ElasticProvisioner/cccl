@@ -167,7 +167,7 @@ for bench in "${BENCHMARKS_TO_RUN[@]}"; do
     case "$bench" in
         fill)
             CPP_BINARY="cub.bench.transform.fill.base"
-            PY_SCRIPT="nvbench_fill.py"
+            PY_SCRIPT="bench_fill.py"
             ;;
         # Add more mappings as benchmarks are implemented
         *)
